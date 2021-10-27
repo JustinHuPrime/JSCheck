@@ -1,0 +1,20 @@
+name: Synchronize to UBC GitHub
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  sychronize:
+    name: Synchronize
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Push
+      env:
+        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      run: |
+        git fetch --prune --unshallow
+        git push https://"$ACCESS_TOKEN"@github.students.cs.ubc.ca/cpsc410-2021w-t1/Project2Group4.git main:master
