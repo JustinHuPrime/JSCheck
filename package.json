@@ -33,13 +33,15 @@
     "@types/sinon": "^10.0.4",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
+    "deep-equal": "^2.0.5",
     "mocha": "^9.1.2",
     "nyc": "^15.1.0",
     "prettier": "^2.4.1",
     "sinon": "^11.1.2",
     "ts-node": "^10.3.0",
-    "typescript": "^4.4.3",
-    "deep-equal": "^2.0.5"
+    "typescript": "^4.4.3"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@babel/parser": "^7.15.8"
+  }
 }
