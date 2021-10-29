@@ -1,5 +1,7 @@
-Use this file to commit information clearly documenting your milestones'
-content. If you want to store more information/details besides what's required
-for the milestones that's fine too. Make sure that your TA has had a chance to
-sign off on your milestones each week (before the deadline); typically you
-should discuss your material with them before finalizing it here.
+# Milestone 1
+
+We discussed several static analysis project ideas, including a borrow checker, a type checker, and annotations for mutability and nullness. We also discussed working on some visualizations of performance, control flow, and class and type hierarchies. After some debate, we ended up voting in favour of either a borrow checker, annotations for mutability and nullness, or a type checker. After discussion with our TA, we ended up deciding to create a type checker for JavaScript.
+
+We have decided to do our analysis on the AST of our input functions, and report instances where JavaScript might raise either a ReferenceError or a TypeError.
+
+We now need to generate a set of examples to run through our type checker, as well as example error messages.
