@@ -5,3 +5,11 @@ We discussed several static analysis project ideas, including a borrow checker, 
 We have decided to do our analysis on the AST of our input functions, and report instances where JavaScript might raise either a ReferenceError or a TypeError.
 
 We now need to generate a set of examples to run through our type checker, as well as example error messages.
+
+# Milestone 2
+
+Our idea remains unchanged from the previous milestone. We take, as input, a list of JavaScript files, and as output, we produce a list of locations where the program may raise either a ReferenceError or a TypeError. As part of this, we need to know what type variables might have at what point in the execution, as well as being aware of the requirements of standard library functions.
+
+We were informed that we ought to involve control flow sensitivity within the type checker - that is, the type checker should recognize that an `if` statement can be predicated on the type of an expression.
+
+Our tasks have not yet been firmly assigned - we're going to more specifically assign tasks after some work on our project's skeleton code, which we plan to work on during this week.
