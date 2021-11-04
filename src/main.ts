@@ -1,6 +1,8 @@
 import * as fs from "fs";
 import report from "./errorReport";
 import * as parser from "@babel/parser";
+import voidVisitor from "./voidVisitor";
+import * as t from "@babel/types";
 
 interface BabelSyntaxError extends SyntaxError {
   loc: {
@@ -17,7 +19,7 @@ if (filenames.length === 0) {
 }
 
 // read and parse the files
-const files = filenames
+filenames
   .map((filename, _idx, _arry) => {
     try {
       return [fs.readFileSync(filename, "utf8"), filename];
@@ -68,9 +70,11 @@ const files = filenames
   })
   .filter((file, _idx, _arry) => {
     return file !== null;
+  })
+  .forEach((file, _idx, _arry) => {
+    voidVisitor(file as unknown as t.File);
+    // TODO: traverse the AST and save error reports to a global structure as you go
   });
-
-// TODO: traverse the AST and save error reports to a global structure as you go
 
 report.printErrors();
 if (report.isEmpty()) {
