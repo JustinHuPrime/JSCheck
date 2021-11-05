@@ -8,8 +8,13 @@ We now need to generate a set of examples to run through our type checker, as we
 
 # Milestone 2
 
-Our idea remains unchanged from the previous milestone. We take, as input, a list of JavaScript files, and as output, we produce a list of locations where the program may raise either a ReferenceError or a TypeError. As part of this, we need to know what type variables might have at what point in the execution, as well as being aware of the requirements of standard library functions.
+We are continuing on with our idea from Milestone 1 - a static analysis-based type checker for JavaScript. Our rough program outline is to take as input a list of JavaScript files, and produce as output a list of locations where the program may raise either a JavaScript ReferenceError or a TypeError. As part of this, we need to know what type variables might have at what point in the execution, as well as being aware of the requirements of standard library functions.
 
-We were informed that we ought to involve control flow sensitivity within the type checker - that is, the type checker should recognize that an `if` statement can be predicated on the type of an expression.
+As part of the TA discussion, we were informed that we ought to involve control flow sensitivity within the type checker - that is, the type checker should recognize that an `if` statement can be predicated on the type of an expression.
 
-Our tasks have not yet been firmly assigned - we're going to more specifically assign tasks after some work on our project's skeleton code, which we plan to work on during this week.
+Tentatively, our task assignments are as follows:
+- **@JustinHuPrime** and **@wyndro** will work on the project skeleton - mostly, reading inputs and setting up the visitor template. (This is mostly done as of the end of this week)
+- **@JustinHuPrime**, **@wyndro**, and **@jlu5** will work on the core analysis code, including the necessary AST visitor(s).
+- **@kilowatt-** and **@curtiskoo** will lead the user studies.
+
+We expect that this project may be harder to compartmentalize than Project 1, so we may change these assignments as we come up with more specific code tasks later on.
