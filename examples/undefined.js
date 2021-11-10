@@ -14,6 +14,15 @@ if (require.main === module) {
 }
 
 /**
- * TypeError: Cannot read property 'concat' of undefined
- * Attempted to call 'concat' on undefined on line 13, expected 'string'
+ * (Level 1 Default JS) TypeError: Cannot read property 'concat' of undefined (13:11)
+ *
+ * (Level 2) TypeError: Attempted to call 'concat' on undefined (13:11)
+ *
+ * (Level 3) TypeError: Attempted to call 'concat' on undefined (13:11)
+ * did you mean to call 'concat' on a string instead?
+ *
+ * (Level 4) TypeError: Attempted to call 'concat' on undefined (13:11)
+ * did you mean to call 'concat' on a string instead?
+ * Warning: 'get' could return undefined at line 12
+ *
  **/

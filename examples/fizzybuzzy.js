@@ -42,3 +42,17 @@ function countBuzz(inputs) {
 if (require.main === module) {
     console.log(countBuzz([...Array(20).keys()]));
 }
+
+/**
+ * (Level 1 Default JS) TypeError: value.match is not a function (35:19)
+ *
+ * (Level 2) TypeError: Attempted to call 'match' on type object (35:19)
+ *
+ * (Level 3) TypeError: Attempted to call 'match' on a list,
+ * did you mean to call 'match' on a string instead? (35:19)
+ *
+ * (Level 4) TypeError: Attempted to call 'match' on a list,
+ * did you mean to call 'match' on a string instead? (35:19)
+ * Warning: 'fizzBuzzList' returns conflicting types: string[] or any[]
+ *
+ * **/

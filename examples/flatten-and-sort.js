@@ -15,3 +15,18 @@ if (require.main === module) {
     ]);
     console.log(nums.sort());
 }
+
+/**
+ * (Level 1 Default JS) TypeError: nums.sort is not a function (16:22)
+ *
+ * (Level 2) Attempted to call 'sort' on type string (16:22)
+ *
+ * (Level 3) Attempted to call 'sort' on a string,
+ * did you mean to call 'sort' on a list instead? (16:22)
+ *
+ * (Level 4) Attempted to call 'sort' on a string,
+ * did you mean to call 'sort' on a list instead? (16:22)
+ * Warning: Addition on list on line 7
+ * Attempted to call '+=' on type object, expected string or number (7:16)
+ *
+ * **/
