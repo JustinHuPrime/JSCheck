@@ -30,7 +30,7 @@
     "@types/chai-as-promised": "^7.1.4",
     "@types/deep-equal": "^1.0.1",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^16.11.0",
+    "@types/node": "^16.11.7",
     "@types/sinon": "^10.0.4",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
