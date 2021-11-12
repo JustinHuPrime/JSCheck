@@ -12,20 +12,20 @@ export default class SymbolTable {
 export abstract class Type {}
 
 // base types
-export class Number extends Type {}
+export class NumberType extends Type {}
 
-export class String extends Type {}
+export class StringType extends Type {}
 
-export class Boolean extends Type {}
+export class BooleanType extends Type {}
 
-export class Void extends Type {}
+export class VoidType extends Type {}
 
-export class Undefined extends Type {}
+export class UndefinedType extends Type {}
 
-export class Null extends Type {}
+export class NullType extends Type {}
 
 // compound types
-export class Object extends Type {
+export class ObjectType extends Type {
   public fields: [string | number, Type][] = [];
 
   constructor(fields: [string | number, Type][]) {
@@ -34,7 +34,7 @@ export class Object extends Type {
   }
 }
 
-export class Array extends Type {
+export class ArrayType extends Type {
   public elementTypes: Type[];
 
   constructor(elementTypes: Type[]) {
@@ -43,7 +43,7 @@ export class Array extends Type {
   }
 }
 
-export class Function extends Type {
+export class FunctionType extends Type {
   public params: Type[];
   public returnType: Type;
 
@@ -55,7 +55,7 @@ export class Function extends Type {
 }
 
 // computed types
-export class Union extends Type {
+export class UnionType extends Type {
   public types: Type[];
 
   constructor(types: Type[]) {
@@ -64,4 +64,4 @@ export class Union extends Type {
   }
 }
 
-export class Any extends Type {}
+export class AnyType extends Type {}
