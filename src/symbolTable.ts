@@ -6,6 +6,16 @@ export default class SymbolTable {
     this.mapping = new Map();
     this.parentScope = parentScope;
   }
+
+  getMap() {
+    // XXX: just for testing so far - we may want a neater API later
+    return this.mapping;
+  }
+
+  getParentScope() {
+    // XXX: just for testing so far - we may want a neater API later
+    return this.parentScope;
+  }
 }
 
 // types
