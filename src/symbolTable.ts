@@ -23,7 +23,7 @@ export abstract class Type {
   public abstract toString: () => string;
 
   public abstract isIterable() : boolean;
-  public abstract getSpreadTypes() : Type[];
+  public abstract getSpreadType() : Type;
 }
 
 // base types
@@ -34,7 +34,7 @@ export class NumberType extends Type {
     return false;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     throw new Error("Number isn't iterable");
   }
 }
@@ -46,8 +46,8 @@ export class StringType extends Type {
     return true;
   }
 
-  public getSpreadTypes(): Type[] {
-    return [this];
+  public getSpreadType(): Type {
+    return this;
   }
 }
 
@@ -58,7 +58,7 @@ export class BooleanType extends Type {
     return false;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     throw new Error("Boolean isn't iterable");
   }
 }
@@ -70,7 +70,7 @@ export class VoidType extends Type {
     return false;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     throw new Error("Void isn't iterable");
   }
 }
@@ -82,7 +82,7 @@ export class UndefinedType extends Type {
     return false;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     throw new Error("Undefined isn't iterable");
   }
 }
@@ -94,7 +94,7 @@ export class NullType extends Type {
     return false;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     throw new Error("Null isn't iterable");
   }
 }
@@ -115,28 +115,28 @@ export class ObjectType extends Type {
     return true;
   }
 
-  public getSpreadTypes(): Type[] {
-    return this.fields.map(value => {return value[1]});
+  public getSpreadType(): Type {
+    return new UnionType(this.fields.map(value => {return value[1]}));
   }
 }
 
 export class ArrayType extends Type {
-  public elementTypes: Type[];
+  public elementType: Type;
   public toString = (): string => {
-    return `array of ${this.elementTypes}`;
+    return `array of ${this.elementType}`;
   };
 
-  constructor(elementTypes: Type[]) {
+  constructor(elementType: Type) {
     super();
-    this.elementTypes = elementTypes;
+    this.elementType = elementType;
   }
 
   public isIterable(): boolean {
     return true;
   }
 
-  public getSpreadTypes(): Type[] {
-    return this.elementTypes;
+  public getSpreadType(): Type {
+    return this.elementType;
   }
 }
 
@@ -157,7 +157,7 @@ export class FunctionType extends Type {
     return false;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     throw new Error("Function isn't iterable");
   }
 }
@@ -171,16 +171,23 @@ export class UnionType extends Type {
 
   constructor(types: Type[]) {
     super();
-    this.types = types;
+    this.types = [];
+    for (let type of types) {
+      if (type instanceof UnionType) {
+        types.push(... type.types);
+      } else {
+        types.push(type);
+      }
+    }
   }
 
   public isIterable(): boolean {
     return this.types.filter(type => type.isIterable()).length != 0;
   }
 
-  public getSpreadTypes(): Type[] {
+  public getSpreadType(): Type {
     this.types = this.types.filter(type => type.isIterable());
-    return [this];
+    return this;
   }
 }
 
@@ -193,7 +200,7 @@ export class AnyType extends Type {
     return true;
   }
 
-  public getSpreadTypes(): Type[] {
-    return [new UnionType([new StringType(), new ArrayType([new AnyType()]), new ObjectType([])])];
+  public getSpreadType(): Type {
+    return new UnionType([new StringType(), new ArrayType(new AnyType()), new ObjectType([])]);
   }
 }
