@@ -34,6 +34,12 @@ export default class TypeVisitor {
       case "VariableDeclaration":
         this.visitVariableDeclaration(node);
         break;
+      case "ExpressionStatement":
+        this.visitExpression(node.expression);
+        break;
+      case "BlockStatement":
+        node.body.forEach((stmt) => this.visitStatement(stmt));
+        break;
       default:
         console.debug(`visitStatement: node of type ${node.type} not supported, skipping.`);
         break;
