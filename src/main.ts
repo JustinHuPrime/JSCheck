@@ -2,7 +2,7 @@ import * as fs from "fs";
 import report from "./errorReport";
 import * as parser from "@babel/parser";
 import * as t from "@babel/types";
-import VoidVisitor from "./voidVisitor";
+import TypeVisitor from "./TypeVisitor";
 
 interface BabelSyntaxError extends SyntaxError {
   loc: {
@@ -18,7 +18,7 @@ if (filenames.length === 0) {
   process.exit(1);
 }
 
-let visitor = new VoidVisitor();
+let visitor = new TypeVisitor();
 // read and parse the files
 filenames
   .map((filename, _idx, _arry) => {
@@ -73,7 +73,7 @@ filenames
     return file !== null;
   })
   .forEach((file, _idx, _arry) => {
-    visitor.visit(file as unknown as t.File);
+    visitor.visitProgram(file as unknown as t.File);
     // TODO: traverse the AST and save error reports to a global structure as you go
   });
 
