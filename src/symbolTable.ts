@@ -19,24 +19,41 @@ export default class SymbolTable {
 }
 
 // types
-export abstract class Type {}
+export abstract class Type {
+  public abstract toString: () => string;
+}
 
 // base types
-export class NumberType extends Type {}
+export class NumberType extends Type {
+  public toString = (): string => { return "number"};
+}
 
-export class StringType extends Type {}
+export class StringType extends Type {
+  public toString = (): string => { return "string"};
+}
 
-export class BooleanType extends Type {}
+export class BooleanType extends Type {
+  public toString = (): string => { return "boolean"};
+}
 
-export class VoidType extends Type {}
+export class VoidType extends Type {
+  public toString = (): string => { return "void"};
+}
 
-export class UndefinedType extends Type {}
+export class UndefinedType extends Type {
+  public toString = (): string => { return "undefined"};
+}
 
-export class NullType extends Type {}
+export class NullType extends Type {
+  public toString = (): string => { return "null"};
+}
 
 // compound types
 export class ObjectType extends Type {
   public fields: [string | number, Type][] = [];
+  public toString = (): string => {
+    return `object with fields: ${this.fields}`;
+  };
 
   constructor(fields: [string | number, Type][]) {
     super();
@@ -46,6 +63,9 @@ export class ObjectType extends Type {
 
 export class ArrayType extends Type {
   public elementTypes: Type[];
+  public toString = (): string => {
+    return `array with types: ${this.elementTypes}`;
+  };
 
   constructor(elementTypes: Type[]) {
     super();
@@ -56,6 +76,9 @@ export class ArrayType extends Type {
 export class FunctionType extends Type {
   public params: Type[];
   public returnType: Type;
+  public toString = (): string => {
+    return `function with parameter types ${this.params} and return type ${this.returnType}`;
+  };
 
   constructor(params: Type[], returnType: Type) {
     super();
@@ -67,6 +90,9 @@ export class FunctionType extends Type {
 // computed types
 export class UnionType extends Type {
   public types: Type[];
+  public toString = (): string => {
+    return `one of the following types ${this.types}`;
+  };
 
   constructor(types: Type[]) {
     super();
@@ -74,4 +100,8 @@ export class UnionType extends Type {
   }
 }
 
-export class AnyType extends Type {}
+export class AnyType extends Type {
+  public toString = (): string => {
+    return "any type";
+  };
+}
