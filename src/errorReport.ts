@@ -81,6 +81,16 @@ class ErrorReport {
   public isEmpty(): boolean {
     return this.errors.length === 0;
   }
+
+  // For testing
+  public restore(): void {
+    this.errors = [];
+  }
+
+  // For testing
+  public getErrors(): Error[] {
+    return this.errors;
+  }
 }
 
 const report = new ErrorReport();

@@ -20,7 +20,7 @@ export default class SymbolTable {
 
 // types
 export abstract class Type {
-  public abstract toString: () => string;
+  public abstract toString(): string;
 
   public abstract isIterable(): boolean;
   public getSpreadType(): Type {
@@ -30,9 +30,9 @@ export abstract class Type {
 
 // base types
 export class NumberType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "number";
-  };
+  }
 
   public isIterable(): boolean {
     return false;
@@ -40,9 +40,9 @@ export class NumberType extends Type {
 }
 
 export class StringType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "string";
-  };
+  }
 
   public isIterable(): boolean {
     return true;
@@ -54,9 +54,9 @@ export class StringType extends Type {
 }
 
 export class BooleanType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "boolean";
-  };
+  }
 
   public isIterable(): boolean {
     return false;
@@ -64,9 +64,9 @@ export class BooleanType extends Type {
 }
 
 export class VoidType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "void";
-  };
+  }
 
   public isIterable(): boolean {
     return false;
@@ -74,9 +74,9 @@ export class VoidType extends Type {
 }
 
 export class UndefinedType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "undefined";
-  };
+  }
 
   public isIterable(): boolean {
     return false;
@@ -84,9 +84,9 @@ export class UndefinedType extends Type {
 }
 
 export class NullType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "null";
-  };
+  }
 
   public isIterable(): boolean {
     return false;
@@ -96,9 +96,9 @@ export class NullType extends Type {
 // compound types
 export class ObjectType extends Type {
   public fields: [string | number, Type][] = [];
-  public toString = (): string => {
+  public toString() {
     return `object with fields: ${this.fields}`;
-  };
+  }
 
   constructor(fields: [string | number, Type][]) {
     super();
@@ -120,9 +120,9 @@ export class ObjectType extends Type {
 
 export class ArrayType extends Type {
   public elementType: Type;
-  public toString = (): string => {
+  public toString() {
     return `array of ${this.elementType}`;
-  };
+  }
 
   constructor(elementType: Type) {
     super();
@@ -141,9 +141,9 @@ export class ArrayType extends Type {
 export class FunctionType extends Type {
   public params: Type[];
   public returnType: Type;
-  public toString = (): string => {
+  public toString() {
     return `function with parameter types ${this.params} and return type ${this.returnType}`;
-  };
+  }
 
   constructor(params: Type[], returnType: Type) {
     super();
@@ -159,20 +159,33 @@ export class FunctionType extends Type {
 // computed types
 export class UnionType extends Type {
   public types: Type[];
-  public toString = (): string => {
+  public toString() {
     return `one of the following types ${this.types}`;
-  };
+  }
 
   constructor(types: Type[]) {
     super();
     this.types = [];
+    // collapse other unions
     for (let type of types) {
       if (type instanceof UnionType) {
-        types.push(...type.types);
+        this.types.push(...type.types);
       } else {
-        types.push(type);
+        this.types.push(type);
       }
     }
+    // filter repeats
+    this.types = this.types.filter((value, index, arry) => {
+      return (
+        arry.findIndex((value2) => {
+          return value2.toString() === value.toString();
+        }) === index
+      );
+    });
+    // sort, so that union equality with toString works
+    this.types = this.types.sort((type1, type2) => {
+      return type1.toString().localeCompare(type2.toString());
+    });
   }
 
   public isIterable(): boolean {
@@ -186,9 +199,9 @@ export class UnionType extends Type {
 }
 
 export class AnyType extends Type {
-  public toString = (): string => {
+  public toString() {
     return "any type";
-  };
+  }
 
   public isIterable(): boolean {
     return true;

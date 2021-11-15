@@ -89,7 +89,6 @@ export default class TypeVisitor {
     }
 
     let foundType;
-    console.log(`node.init is ${node.init?.type}`);
     if (node.init == null) {
       foundType = new UndefinedType();
     } else {
@@ -103,24 +102,34 @@ export default class TypeVisitor {
     if (node.elements == null) {
       return new ArrayType(new AnyType());
     } else {
-      let elementTypes: Set<Type> = new Set<Type>();
+      let elementTypes: Type[] = [];
       for (let element of node.elements) {
         if (element === null) {
           throw new Error("I don't think this is possible");
         } else if (t.isSpreadElement(element)) {
-          elementTypes.add(this.visitSpreadElement(element));
+          elementTypes.push(this.visitSpreadElement(element));
         } else {
-          elementTypes.add(this.visitExpression(element));
+          elementTypes.push(this.visitExpression(element));
         }
       }
-      if (elementTypes.has(new AnyType())) {
+      if (
+        elementTypes.some((value) => {
+          return value.toString() === new AnyType().toString();
+        })
+      ) {
         return new ArrayType(new AnyType());
       }
-      let types = Array.from(elementTypes);
-      if (types.length === 1) {
-        return new ArrayType(types[0] as Type);
+      elementTypes = elementTypes.filter((value, index, arry) => {
+        return (
+          arry.findIndex((value2) => {
+            return value2.toString() === value.toString();
+          }) === index
+        );
+      });
+      if (elementTypes.length === 1) {
+        return new ArrayType(elementTypes[0] as Type);
       } else {
-        return new ArrayType(new UnionType(types));
+        return new ArrayType(new UnionType(elementTypes));
       }
     }
   }
