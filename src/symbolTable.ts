@@ -22,80 +22,74 @@ export default class SymbolTable {
 export abstract class Type {
   public abstract toString: () => string;
 
-  public abstract isIterable() : boolean;
-  public abstract getSpreadType() : Type;
+  public abstract isIterable(): boolean;
+  public getSpreadType(): Type {
+    throw new Error(`${this} isn't iterable`);
+  }
 }
 
 // base types
 export class NumberType extends Type {
-  public toString = (): string => { return "number"};
+  public toString = (): string => {
+    return "number";
+  };
 
   public isIterable(): boolean {
     return false;
   }
-
-  public getSpreadType(): Type {
-    throw new Error("Number isn't iterable");
-  }
 }
 
 export class StringType extends Type {
-  public toString = (): string => { return "string"};
+  public toString = (): string => {
+    return "string";
+  };
 
   public isIterable(): boolean {
     return true;
   }
 
-  public getSpreadType(): Type {
+  public override getSpreadType(): Type {
     return this;
   }
 }
 
 export class BooleanType extends Type {
-  public toString = (): string => { return "boolean"};
+  public toString = (): string => {
+    return "boolean";
+  };
 
   public isIterable(): boolean {
     return false;
-  }
-
-  public getSpreadType(): Type {
-    throw new Error("Boolean isn't iterable");
   }
 }
 
 export class VoidType extends Type {
-  public toString = (): string => { return "void"};
+  public toString = (): string => {
+    return "void";
+  };
 
   public isIterable(): boolean {
     return false;
-  }
-
-  public getSpreadType(): Type {
-    throw new Error("Void isn't iterable");
   }
 }
 
 export class UndefinedType extends Type {
-  public toString = (): string => { return "undefined"};
+  public toString = (): string => {
+    return "undefined";
+  };
 
   public isIterable(): boolean {
     return false;
-  }
-
-  public getSpreadType(): Type {
-    throw new Error("Undefined isn't iterable");
   }
 }
 
 export class NullType extends Type {
-  public toString = (): string => { return "null"};
+  public toString = (): string => {
+    return "null";
+  };
 
   public isIterable(): boolean {
     return false;
-  }
-
-  public getSpreadType(): Type {
-    throw new Error("Null isn't iterable");
   }
 }
 
@@ -115,8 +109,12 @@ export class ObjectType extends Type {
     return true;
   }
 
-  public getSpreadType(): Type {
-    return new UnionType(this.fields.map(value => {return value[1]}));
+  public override getSpreadType(): Type {
+    return new UnionType(
+      this.fields.map((value) => {
+        return value[1];
+      }),
+    );
   }
 }
 
@@ -135,7 +133,7 @@ export class ArrayType extends Type {
     return true;
   }
 
-  public getSpreadType(): Type {
+  public override getSpreadType(): Type {
     return this.elementType;
   }
 }
@@ -156,10 +154,6 @@ export class FunctionType extends Type {
   public isIterable(): boolean {
     return false;
   }
-
-  public getSpreadType(): Type {
-    throw new Error("Function isn't iterable");
-  }
 }
 
 // computed types
@@ -174,7 +168,7 @@ export class UnionType extends Type {
     this.types = [];
     for (let type of types) {
       if (type instanceof UnionType) {
-        types.push(... type.types);
+        types.push(...type.types);
       } else {
         types.push(type);
       }
@@ -182,11 +176,11 @@ export class UnionType extends Type {
   }
 
   public isIterable(): boolean {
-    return this.types.filter(type => type.isIterable()).length != 0;
+    return this.types.filter((type) => type.isIterable()).length != 0;
   }
 
-  public getSpreadType(): Type {
-    this.types = this.types.filter(type => type.isIterable());
+  public override getSpreadType(): Type {
+    this.types = this.types.filter((type) => type.isIterable());
     return this;
   }
 }
@@ -200,7 +194,11 @@ export class AnyType extends Type {
     return true;
   }
 
-  public getSpreadType(): Type {
-    return new UnionType([new StringType(), new ArrayType(new AnyType()), new ObjectType([])]);
+  public override getSpreadType(): Type {
+    return new UnionType([
+      new StringType(),
+      new ArrayType(new AnyType()),
+      new ObjectType([]),
+    ]);
   }
 }

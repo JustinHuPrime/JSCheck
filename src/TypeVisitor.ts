@@ -1,12 +1,16 @@
 import * as t from "@babel/types";
 import SymbolTable, {
-  AnyType, ArrayType, BooleanType,
+  AnyType,
+  ArrayType,
+  BooleanType,
   NullType,
   NumberType,
-  StringType, Type, UndefinedType, UnionType,
+  StringType,
+  Type,
+  UndefinedType,
+  UnionType,
 } from "./symbolTable";
 import report from "./errorReport";
-
 
 export default class TypeVisitor {
   private symbolTable: SymbolTable;
@@ -14,7 +18,8 @@ export default class TypeVisitor {
     this.symbolTable = new SymbolTable();
   }
 
-  getSymbolTable() {
+  // For debugging
+  public getSymbolTable() {
     return this.symbolTable;
   }
 
@@ -41,7 +46,9 @@ export default class TypeVisitor {
         node.body.forEach((stmt) => this.visitStatement(stmt));
         break;
       default:
-        console.debug(`visitStatement: node of type ${node.type} not supported, skipping.`);
+        console.debug(
+          `visitStatement: node of type ${node.type} not supported, skipping.`,
+        );
         break;
     }
   }
@@ -49,17 +56,22 @@ export default class TypeVisitor {
   visitExpression(node: t.Expression): Type {
     console.log(`visit: seeing a ${node.type}`);
     switch (node.type) {
-      case "NullLiteral": return new NullType;
-      case "StringLiteral": return new StringType;
-      case "BooleanLiteral": return new BooleanType;
+      case "NullLiteral":
+        return new NullType();
+      case "StringLiteral":
+        return new StringType();
+      case "BooleanLiteral":
+        return new BooleanType();
       case "NumericLiteral":
       case "BigIntLiteral":
       case "DecimalLiteral":
-        return new NumberType;
+        return new NumberType();
       case "ArrayExpression":
         return this.visitArrayExpression(node);
       default:
-        console.debug(`visitExpression: node of type ${node.type} not supported, returning Any.`);
+        console.debug(
+          `visitExpression: node of type ${node.type} not supported, returning Any.`,
+        );
         return new AnyType();
     }
   }
@@ -71,7 +83,9 @@ export default class TypeVisitor {
   }
   private visitVariableDeclarator(node: t.VariableDeclarator) {
     if (!t.isIdentifier(node.id)) {
-      throw new Error("Pattern matching variable declarations are not supported.");
+      throw new Error(
+        "Pattern matching variable declarations are not supported.",
+      );
     }
 
     let foundType;
@@ -115,12 +129,16 @@ export default class TypeVisitor {
     let type: Type = this.visitExpression(node.argument);
     if (!type.isIterable()) {
       // TODO: Figure out filename
-      report.addError(`The spread operator can only operate on iterable types, instead was given ${type}`, "", node.loc?.start.line, node.loc?.start.column);
+      report.addError(
+        `The spread operator can only operate on iterable types, instead was given ${type}`,
+        "",
+        node.loc?.start.line,
+        node.loc?.start.column,
+      );
       // TODO: Figure out appropriate type to continue with
       return new AnyType(); // continue for further error reporting
     } else {
       return type.getSpreadType();
     }
   }
-
 }
