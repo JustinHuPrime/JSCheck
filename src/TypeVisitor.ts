@@ -71,6 +71,9 @@ export default class TypeVisitor {
       case "AssignmentExpression":
         // assignments to existing vars, like `x = 5;`
         return this.visitAssignmentExpression(node);
+      case "Identifier":
+        // Reference to a variable
+        return this.getVariableType(node.name, node);
       default:
         console.debug(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
@@ -78,6 +81,22 @@ export default class TypeVisitor {
         console.debug(node);
         return new AnyType();
     }
+  }
+
+  public getVariableType(variableName: string, node: t.Node): Type {
+    let mapping = this.symbolTable.getMap();
+    let type = mapping.get(variableName);
+    if (type == null) {
+      report.addError(
+        `Reference to unknown variable ${variableName}`,
+        // TODO: missing filename
+        "",
+        node.loc?.start.line,
+        node.loc?.start.column,
+      );
+      return new AnyType(); // proceed on errors
+    }
+    return type;
   }
 
   public setVariableType(variableName: string, newType: Type) {
