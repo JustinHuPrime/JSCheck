@@ -68,12 +68,31 @@ export default class TypeVisitor {
         return new NumberType();
       case "ArrayExpression":
         return this.visitArrayExpression(node);
+      case "AssignmentExpression":
+        // assignments to existing vars, like `x = 5;`
+        return this.visitAssignmentExpression(node);
       default:
         console.debug(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
         );
+        console.debug(node);
         return new AnyType();
     }
+  }
+
+  public setVariableType(variableName: string, newType: Type) {
+    let mapping = this.symbolTable.getMap();
+    return mapping.set(variableName, newType);
+  }
+
+  // Assignments to existing vars, e.g. `x = 5;`
+  private visitAssignmentExpression(node: t.AssignmentExpression): Type {
+    let rhsType = this.visitExpression(node.right);
+    if (t.isIdentifier(node.left)) {
+      // Setting a variable
+      this.setVariableType(node.left.name, rhsType);
+    }
+    return rhsType;
   }
 
   private visitVariableDeclaration(node: t.VariableDeclaration) {
@@ -94,8 +113,7 @@ export default class TypeVisitor {
     } else {
       foundType = this.visitExpression(node.init);
     }
-    let mapping = this.symbolTable.getMap();
-    mapping.set(node.id.name, foundType);
+    this.setVariableType(node.id.name, foundType);
   }
 
   private visitArrayExpression(node: t.ArrayExpression) {
