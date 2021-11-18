@@ -13,11 +13,9 @@ interface BabelSyntaxError extends SyntaxError {
 
 export default class TypeChecker {
   private filenames: string[];
-  private visitor: TypeVisitor;
 
   constructor(filenames: string[]) {
     this.filenames = filenames;
-    this.visitor = new TypeVisitor();
   }
 
   public typeCheck() {
@@ -80,13 +78,10 @@ export default class TypeChecker {
         return file !== null;
       })
       .forEach((file, _idx, _arry) => {
-        this.visitor.visitProgram(file as unknown as t.File);
+        new TypeVisitor(this.filenames[_idx] as string).visitProgram(
+          file as unknown as t.File,
+        );
         // TODO: traverse the AST and save error reports to a global structure as you go
       });
-  }
-
-  // For testing
-  public getSymbolTable() {
-    return this.visitor.getSymbolTable();
   }
 }
