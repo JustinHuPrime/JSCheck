@@ -111,7 +111,7 @@ export class ObjectType extends Type {
   }
 
   public override getSpreadType(): Type {
-    return new UnionType(
+    return UnionType.asNeeded(
       this.fields.map((value) => {
         return value[1];
       }),
@@ -164,29 +164,41 @@ export class UnionType extends Type {
     return `one of the following types ${this.types}`;
   }
 
-  constructor(types: Type[]) {
-    super();
-    this.types = [];
-    // collapse other unions
+  // Union constructor that normalizes nested unions, removes duplicates, and strips unions of 1 type
+  static asNeeded(types: Type[]) {
+    console.log(`UnionType.asNeeded: got ${types}`);
+    let normalizedTypes = [];
+    // collapse nested unions
     for (let type of types) {
       if (type instanceof UnionType) {
-        this.types.push(...type.types);
+        normalizedTypes.push(...type.types);
       } else {
-        this.types.push(type);
+        normalizedTypes.push(type);
       }
     }
     // filter repeats
-    this.types = this.types.filter((value, index, arry) => {
+    normalizedTypes = normalizedTypes.filter((value, index, arry) => {
       return (
         arry.findIndex((value2) => {
           return value2.toString() === value.toString();
         }) === index
       );
     });
+
     // sort, so that union equality with toString works
-    this.types = this.types.sort((type1, type2) => {
+    normalizedTypes = normalizedTypes.sort((type1, type2) => {
       return type1.toString().localeCompare(type2.toString());
     });
+
+    if (normalizedTypes.length === 1) {
+      return normalizedTypes[0]!;
+    }
+    return new UnionType(normalizedTypes);
+  }
+
+  private constructor(types: Type[]) {
+    super();
+    this.types = types;
   }
 
   public isIterable(): boolean {
@@ -209,7 +221,7 @@ export class AnyType extends Type {
   }
 
   public override getSpreadType(): Type {
-    return new UnionType([
+    return UnionType.asNeeded([
       new StringType(),
       new ArrayType(new AnyType()),
       new ObjectType([]),

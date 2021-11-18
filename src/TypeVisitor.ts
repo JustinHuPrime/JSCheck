@@ -171,11 +171,7 @@ export default class TypeVisitor {
           }) === index
         );
       });
-      if (elementTypes.length === 1) {
-        return new ArrayType(elementTypes[0] as Type);
-      } else {
-        return new ArrayType(new UnionType(elementTypes));
-      }
+      return new ArrayType(UnionType.asNeeded(elementTypes));
     }
   }
 
