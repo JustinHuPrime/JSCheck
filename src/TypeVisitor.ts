@@ -106,12 +106,20 @@ export default class TypeVisitor {
 
   // Assignments to existing vars, e.g. `x = 5;`
   private visitAssignmentExpression(node: t.AssignmentExpression): Type {
-    let rhsType = this.visitExpression(node.right);
-    if (t.isIdentifier(node.left)) {
-      // Setting a variable
-      this.setVariableType(node.left.name, rhsType);
+    switch (node.operator) {
+      case "=":
+        let rhsType = this.visitExpression(node.right);
+        if (t.isIdentifier(node.left)) {
+          // Setting a variable
+          this.setVariableType(node.left.name, rhsType);
+        }
+        return rhsType;
+      default:
+        console.warn(
+          `visitAssignmentExpression: assignments of type ${node.operator} are not yet supported`,
+        );
+        return new AnyType();
     }
-    return rhsType;
   }
 
   private visitVariableDeclaration(node: t.VariableDeclaration) {
