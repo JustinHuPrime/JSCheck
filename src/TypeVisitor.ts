@@ -68,9 +68,55 @@ export default class TypeVisitor {
         return new NumberType();
       case "ArrayExpression":
         return this.visitArrayExpression(node);
+      case "AssignmentExpression":
+        // assignments to existing vars, like `x = 5;`
+        return this.visitAssignmentExpression(node);
+      case "Identifier":
+        // Reference to a variable
+        return this.getVariableType(node.name, node);
       default:
         console.debug(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
+        );
+        console.debug(node);
+        return new AnyType();
+    }
+  }
+
+  public getVariableType(variableName: string, node: t.Node): Type {
+    let mapping = this.symbolTable.getMap();
+    let type = mapping.get(variableName);
+    if (type == null) {
+      report.addError(
+        `Reference to unknown variable ${variableName}`,
+        // TODO: missing filename
+        "",
+        node.loc?.start.line,
+        node.loc?.start.column,
+      );
+      return new AnyType(); // proceed on errors
+    }
+    return type;
+  }
+
+  public setVariableType(variableName: string, newType: Type) {
+    let mapping = this.symbolTable.getMap();
+    return mapping.set(variableName, newType);
+  }
+
+  // Assignments to existing vars, e.g. `x = 5;`
+  private visitAssignmentExpression(node: t.AssignmentExpression): Type {
+    switch (node.operator) {
+      case "=":
+        let rhsType = this.visitExpression(node.right);
+        if (t.isIdentifier(node.left)) {
+          // Setting a variable
+          this.setVariableType(node.left.name, rhsType);
+        }
+        return rhsType;
+      default:
+        console.warn(
+          `visitAssignmentExpression: assignments of type ${node.operator} are not yet supported`,
         );
         return new AnyType();
     }
@@ -94,8 +140,7 @@ export default class TypeVisitor {
     } else {
       foundType = this.visitExpression(node.init);
     }
-    let mapping = this.symbolTable.getMap();
-    mapping.set(node.id.name, foundType);
+    this.setVariableType(node.id.name, foundType);
   }
 
   private visitArrayExpression(node: t.ArrayExpression) {

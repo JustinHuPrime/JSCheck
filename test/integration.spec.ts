@@ -1,7 +1,7 @@
 import report from "../src/errorReport";
 import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
-import { ArrayType, NumberType, StringType } from "../src/symbolTable";
+import { AnyType, ArrayType, NumberType, StringType } from "../src/symbolTable";
 
 describe("Integration Tests", () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe("Integration Tests", () => {
     return typechecker.getSymbolTable();
   };
 
-  it("Simple assignment passes", () => {
+  it("Simple assignment", () => {
     let symbolTable = typecheckFiles([
       "./test/test-examples/simple-assignment.js",
     ]).getMap();
@@ -31,6 +31,40 @@ describe("Integration Tests", () => {
         ["a", new NumberType()],
         ["b", new StringType()],
         ["c", new ArrayType(new NumberType())],
+      ]),
+    );
+  });
+
+  it("Variable declaration: unknown variable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/declaration-error-unknown-var.js",
+    ]).getMap();
+    assert.equal(report.getErrors().length, 1);
+    // AnyType is used here as a fallback
+    assert.deepEqual(symbolTable, new Map([["x", new AnyType()]]));
+  });
+
+  it("Reassignment: simple - single variable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/assignment-simple.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(symbolTable, new Map([["x", new StringType()]]));
+  });
+
+  it("Reassignment: variable references and chaining", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/assignment-to-var-chain.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", new StringType()],
+        ["y", new StringType()],
+        ["z", new NumberType()],
       ]),
     );
   });
