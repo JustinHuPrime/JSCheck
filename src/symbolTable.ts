@@ -20,6 +20,7 @@ export default class SymbolTable {
 
 // types
 export abstract class Type {
+  type = this.toString(); // used to determine deep equality
   public abstract toString(): string;
 
   public abstract isIterable(): boolean;
