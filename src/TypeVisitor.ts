@@ -74,6 +74,9 @@ export default class TypeVisitor {
       case "Identifier":
         // Reference to a variable
         return this.getVariableType(node.name, node);
+      case "MemberExpression":
+        // Reference to an array index or object property
+        return this.visitMemberExpression(node);
       default:
         console.debug(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
@@ -112,6 +115,40 @@ export default class TypeVisitor {
         if (t.isIdentifier(node.left)) {
           // Setting a variable
           this.setVariableType(node.left.name, rhsType);
+        } else if (t.isMemberExpression(node.left)) {
+          // Assignment to array or object member:
+          // We ONLY handle numeric assignments to arrays, and static property assignments to objects
+          // Dynamic property assignments in the form `obj[fieldName]` are NOT supported as the field name can vary at runtime
+          // We assume that all assignments to arrays are in range - i.e. ignoring potentially undefined elements added in between
+          let lhsType = this.visitExpression(node.left.object);
+          let indexOrPropertyType = null;
+          if (t.isExpression(node.left.property)) {
+            indexOrPropertyType = this.visitExpression(node.left.property);
+          }
+          let lhsIsVariable = t.isIdentifier(node.left.object);
+
+          if (lhsIsVariable) {
+            if (
+              lhsType instanceof ArrayType &&
+              indexOrPropertyType instanceof NumberType
+            ) {
+              // if the LHS is a variable, update its type
+              let newListType = new ArrayType(
+                UnionType.asNeeded([lhsType.elementType, rhsType]),
+              );
+              this.setVariableType(
+                (node.left.object as t.Identifier).name,
+                newListType,
+              );
+            } else {
+              // TODO: support objects
+              console.warn(
+                `visitAssignmentExpression: unsupported assignment type for node ${node}.`,
+              );
+            }
+          }
+          // Otherwise, I don't think there's anything to do? JS will accept assigning to members of anything -
+          // for numbers and strings it appears to just be a noop -JL
         }
         return rhsType;
       default:
@@ -190,5 +227,24 @@ export default class TypeVisitor {
     } else {
       return type.getSpreadType();
     }
+  }
+
+  private visitMemberExpression(node: t.MemberExpression): Type {
+    let objectType = this.visitExpression(node.object);
+    let propertyType = null;
+    if (t.isExpression(node.property)) {
+      propertyType = this.visitExpression(node.property);
+    }
+
+    if (objectType instanceof ArrayType && propertyType instanceof NumberType) {
+      return objectType.elementType;
+    }
+    // TODO: handle objects
+
+    console.warn(
+      `visitMemberExpression: unsupported property access (${propertyType} on ${objectType})`,
+    );
+    console.debug(node);
+    return new AnyType();
   }
 }

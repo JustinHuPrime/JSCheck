@@ -1,7 +1,13 @@
 import report from "../src/errorReport";
 import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
-import { AnyType, ArrayType, NumberType, StringType } from "../src/symbolTable";
+import {
+  AnyType,
+  ArrayType,
+  NumberType,
+  StringType,
+  UnionType,
+} from "../src/symbolTable";
 
 describe("Integration Tests", () => {
   beforeEach(() => {
@@ -65,6 +71,33 @@ describe("Integration Tests", () => {
         ["x", new StringType()],
         ["y", new StringType()],
         ["z", new NumberType()],
+      ]),
+    );
+  });
+
+  it("Lists: declaration, reading/assigning items", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    let unionType = UnionType.asNeeded([new StringType(), new NumberType()]);
+    assert.deepEqual(symbolTable.get("lst"), new ArrayType(unionType));
+    assert.deepEqual(symbolTable.get("x"), new NumberType());
+    assert.deepEqual(symbolTable.get("y"), unionType);
+  });
+
+  it("Lists: ignore unsupported assignments", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-unsupported-assign.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["lst", new ArrayType(new NumberType())],
+        ["x", new NumberType()],
       ]),
     );
   });
