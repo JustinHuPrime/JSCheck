@@ -1,7 +1,7 @@
 {
   "name": "jscheck",
   "version": "0.1.0",
-  "description": "Minecraft datapack specification language",
+  "description": "Javascript static type checker",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {

@@ -19,59 +19,199 @@ export default class SymbolTable {
 }
 
 // types
-export abstract class Type {}
+export abstract class Type {
+  public abstract toString(): string;
+
+  public abstract isIterable(): boolean;
+  public getSpreadType(): Type {
+    throw new Error(`${this} isn't iterable`);
+  }
+}
 
 // base types
-export class NumberType extends Type {}
+export class NumberType extends Type {
+  public toString() {
+    return "number";
+  }
 
-export class StringType extends Type {}
+  public isIterable(): boolean {
+    return false;
+  }
+}
 
-export class BooleanType extends Type {}
+export class StringType extends Type {
+  public toString() {
+    return "string";
+  }
 
-export class VoidType extends Type {}
+  public isIterable(): boolean {
+    return true;
+  }
 
-export class UndefinedType extends Type {}
+  public override getSpreadType(): Type {
+    return this;
+  }
+}
 
-export class NullType extends Type {}
+export class BooleanType extends Type {
+  public toString() {
+    return "boolean";
+  }
+
+  public isIterable(): boolean {
+    return false;
+  }
+}
+
+export class VoidType extends Type {
+  public toString() {
+    return "void";
+  }
+
+  public isIterable(): boolean {
+    return false;
+  }
+}
+
+export class UndefinedType extends Type {
+  public toString() {
+    return "undefined";
+  }
+
+  public isIterable(): boolean {
+    return false;
+  }
+}
+
+export class NullType extends Type {
+  public toString() {
+    return "null";
+  }
+
+  public isIterable(): boolean {
+    return false;
+  }
+}
 
 // compound types
 export class ObjectType extends Type {
   public fields: [string | number, Type][] = [];
+  public toString() {
+    return `object with fields: ${this.fields}`;
+  }
 
   constructor(fields: [string | number, Type][]) {
     super();
     this.fields = fields;
   }
+
+  public isIterable(): boolean {
+    return true;
+  }
+
+  public override getSpreadType(): Type {
+    return new UnionType(
+      this.fields.map((value) => {
+        return value[1];
+      }),
+    );
+  }
 }
 
 export class ArrayType extends Type {
-  public elementTypes: Type[];
+  public elementType: Type;
+  public toString() {
+    return `array of ${this.elementType}`;
+  }
 
-  constructor(elementTypes: Type[]) {
+  constructor(elementType: Type) {
     super();
-    this.elementTypes = elementTypes;
+    this.elementType = elementType;
+  }
+
+  public isIterable(): boolean {
+    return true;
+  }
+
+  public override getSpreadType(): Type {
+    return this.elementType;
   }
 }
 
 export class FunctionType extends Type {
   public params: Type[];
   public returnType: Type;
+  public toString() {
+    return `function with parameter types ${this.params} and return type ${this.returnType}`;
+  }
 
   constructor(params: Type[], returnType: Type) {
     super();
     this.params = params;
     this.returnType = returnType;
   }
+
+  public isIterable(): boolean {
+    return false;
+  }
 }
 
 // computed types
 export class UnionType extends Type {
   public types: Type[];
+  public toString() {
+    return `one of the following types ${this.types}`;
+  }
 
   constructor(types: Type[]) {
     super();
-    this.types = types;
+    this.types = [];
+    // collapse other unions
+    for (let type of types) {
+      if (type instanceof UnionType) {
+        this.types.push(...type.types);
+      } else {
+        this.types.push(type);
+      }
+    }
+    // filter repeats
+    this.types = this.types.filter((value, index, arry) => {
+      return (
+        arry.findIndex((value2) => {
+          return value2.toString() === value.toString();
+        }) === index
+      );
+    });
+    // sort, so that union equality with toString works
+    this.types = this.types.sort((type1, type2) => {
+      return type1.toString().localeCompare(type2.toString());
+    });
+  }
+
+  public isIterable(): boolean {
+    return this.types.filter((type) => type.isIterable()).length != 0;
+  }
+
+  public override getSpreadType(): Type {
+    this.types = this.types.filter((type) => type.isIterable());
+    return this;
   }
 }
 
-export class AnyType extends Type {}
+export class AnyType extends Type {
+  public toString() {
+    return "any type";
+  }
+
+  public isIterable(): boolean {
+    return true;
+  }
+
+  public override getSpreadType(): Type {
+    return new UnionType([
+      new StringType(),
+      new ArrayType(new AnyType()),
+      new ObjectType([]),
+    ]);
+  }
+}
