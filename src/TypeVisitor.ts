@@ -78,8 +78,9 @@ export default class TypeVisitor {
         // Reference to an array index or object property
         return this.visitMemberExpression(node);
       case "BinaryExpression":
-      case "SequenceExpression":
         return this.visitBinaryExpression(node);
+      case "SequenceExpression":
+        return this.visitSequenceExpression(node);
       case "LogicalExpression":
         return this.visitLogicalExpression(node);
       case "UnaryExpression":
