@@ -3,6 +3,7 @@ import report from "./errorReport";
 import * as parser from "@babel/parser";
 import * as t from "@babel/types";
 import TypeVisitor from "./TypeVisitor";
+import SymbolTable from "./symbolTable";
 
 interface BabelSyntaxError extends SyntaxError {
   loc: {
@@ -13,11 +14,11 @@ interface BabelSyntaxError extends SyntaxError {
 
 export default class TypeChecker {
   private filenames: string[];
-  private visitor: TypeVisitor;
+  private visitors: Map<string, TypeVisitor>;
 
   constructor(filenames: string[]) {
     this.filenames = filenames;
-    this.visitor = new TypeVisitor();
+    this.visitors = new Map();
   }
 
   public typeCheck() {
@@ -80,13 +81,15 @@ export default class TypeChecker {
         return file !== null;
       })
       .forEach((file, _idx, _arry) => {
-        this.visitor.visitProgram(file as unknown as t.File);
-        // TODO: traverse the AST and save error reports to a global structure as you go
+        const filename = this.filenames[_idx] as string;
+        this.visitors.set(filename, new TypeVisitor(filename));
+
+        this.visitors.get(filename)?.visitProgram(file as unknown as t.File);
       });
   }
 
   // For testing
-  public getSymbolTable() {
-    return this.visitor.getSymbolTable();
+  public getSymbolTable(filename: string): SymbolTable | undefined {
+    return this.visitors.get(filename)?.getSymbolTable();
   }
 }
