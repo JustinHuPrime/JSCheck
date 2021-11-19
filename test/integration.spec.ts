@@ -1,9 +1,8 @@
 import report from "../src/errorReport";
 import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
-import {
-  AnyType,
-  ArrayType,
+import SymbolTable, {
+  ArrayType, ErrorType,
   NumberType,
   StringType,
   UnionType,
@@ -18,7 +17,7 @@ describe("Integration Tests", () => {
     assert.equal(report.isEmpty(), true);
     let typechecker = new TypeChecker(filenames);
     typechecker.typeCheck();
-    return typechecker.getSymbolTable();
+    return typechecker.getSymbolTable(filenames[0] as string) as SymbolTable;
   };
 
   it("Simple assignment", () => {
@@ -46,8 +45,8 @@ describe("Integration Tests", () => {
       "./test/test-examples/declaration-error-unknown-var.js",
     ]).getMap();
     assert.equal(report.getErrors().length, 1);
-    // AnyType is used here as a fallback
-    assert.deepEqual(symbolTable, new Map([["x", new AnyType()]]));
+
+    assert.deepEqual(symbolTable, new Map([["x", new ErrorType()]]));
   });
 
   it("Reassignment: simple - single variable", () => {
@@ -101,4 +100,35 @@ describe("Integration Tests", () => {
       ]),
     );
   });
+
+  it("Lists: should spread iterables", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-supported-spread.js",
+    ]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["a", new StringType()],
+        ["b", new ArrayType(new StringType())],
+      ]),
+    );
+  })
+
+  it("Lists: should contain error when trying to spread non-iterable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-unsupported-spread.js",
+    ]).getMap();
+
+    assert.equal(report.getErrors().length, 1);
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["a", new ArrayType(new ErrorType())],
+      ]),
+    );
+  })
 });

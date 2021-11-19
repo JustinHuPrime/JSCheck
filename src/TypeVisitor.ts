@@ -3,6 +3,7 @@ import SymbolTable, {
   AnyType,
   ArrayType,
   BooleanType,
+  ErrorType,
   NullType,
   NumberType,
   StringType,
@@ -14,7 +15,10 @@ import report from "./errorReport";
 
 export default class TypeVisitor {
   private symbolTable: SymbolTable;
-  constructor() {
+  private filename: string;
+
+  constructor(filename: string) {
+    this.filename = filename;
     this.symbolTable = new SymbolTable();
   }
 
@@ -92,12 +96,11 @@ export default class TypeVisitor {
     if (type == null) {
       report.addError(
         `Reference to unknown variable ${variableName}`,
-        // TODO: missing filename
-        "",
+        this.filename,
         node.loc?.start.line,
         node.loc?.start.column,
       );
-      return new AnyType(); // proceed on errors
+      return new ErrorType(); // proceed on errors
     }
     return type;
   }
@@ -189,7 +192,7 @@ export default class TypeVisitor {
         if (element === null) {
           throw new Error("I don't think this is possible");
         } else if (t.isSpreadElement(element)) {
-          elementTypes.push(this.visitSpreadElement(element));
+          elementTypes.push(this.visitArraySpreadElement(element));
         } else {
           elementTypes.push(this.visitExpression(element));
         }
@@ -212,22 +215,37 @@ export default class TypeVisitor {
     }
   }
 
-  private visitSpreadElement(node: t.SpreadElement): Type {
+  private visitArraySpreadElement(node: t.SpreadElement): Type {
     let type: Type = this.visitExpression(node.argument);
     if (!type.isIterable()) {
-      // TODO: Figure out filename
       report.addError(
         `The spread operator can only operate on iterable types, instead was given ${type}`,
-        "",
+        this.filename,
         node.loc?.start.line,
         node.loc?.start.column,
       );
-      // TODO: Figure out appropriate type to continue with
-      return new AnyType(); // continue for further error reporting
+      return new ErrorType();
     } else {
       return type.getSpreadType();
     }
   }
+
+  // TODO: Uncomment code when visit object is implemented
+  // private visitObjectSpreadElement(node: t.SpreadElement): Type {
+  //   const type: Type = this.visitExpression(node.argument);
+  //
+  //   if (!type.isIterable() && !(type instanceof ObjectType)) {
+  //     report.addError(
+  //       `The spread operator can only operate on iterable types, instead was given ${type}`,
+  //       this.filename,
+  //       node.loc?.start.line,
+  //       node.loc?.start.column,
+  //     );
+  //     return new ErrorType();
+  //   } else {
+  //     return type.getSpreadType();
+  //   }
+  // }
 
   private visitMemberExpression(node: t.MemberExpression): Type {
     let objectType = this.visitExpression(node.object);
