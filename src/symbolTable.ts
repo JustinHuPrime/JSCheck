@@ -306,6 +306,16 @@ export class ErrorType extends Type {
   public isIterable(): boolean {
     return false;
   }
+
+  public toPrimitive(): Type {
+    return new ErrorType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
+    return false;
+  }
 }
 
 export class AnyType extends Type {
