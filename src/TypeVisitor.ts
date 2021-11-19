@@ -227,7 +227,7 @@ export default class TypeVisitor {
       return node.name;
     } else if (t.isLiteral(node) && "value" in node) {
       // If it's a computed name, we only handle cases when they are literals
-      // (coerse them into a string if they have a value, and fail otherwise)
+      // (coerce them into a string if they have a value, and fail otherwise)
       return node.value.toString();
     } else {
       console.warn(
