@@ -47,6 +47,30 @@ We will be having further discussions on the appropriate level of information gi
 
 # Milestone 4
 
+So far, we've implemented type checking for the following:
+
+- Literals: strings, numbers, arrays, objects
+  - For arrays, we track their element type, which may be one type or multiple types within a `UnionType`
+  - For objects, we track each property and the types they have in a mapping
+- Binary / unary operations
+- Variable references and assignment (only `=` so far)
+- Reading/writing array indices and object properties
+  - For arrays, we only support numeric indices and assume all array accesses are in range
+  - For objects, we only support static and literal property names. e.g. `obj.name` and `obj['name']` are supported but not `obj['name' + someVar]`, as the latter means that the property name can change at runtime
+
+Planned / Work in progress parts:
+- If statements
+  - In most cases, we will union types of variables that get (re)assigned inside an `if` statement
+- For loops
+- Compound assignments (e.g. `+=`)
+- Field references/method on primitive types (e.g. `.slice()` on a number should raise an error)
+  - For primitive types, we may hardcode a list of known functions, or read them off of some JavaScript API
+- Type specialization (e.g. `if typeof(x) === “string” {...}`)
+
+Tentatively, we plan to drop support for function calls and imports, instead limit our type checker's focus to simple self-contained scripts.
+
+---------------------
+
 Plans for final user study:
 
 We plan to conduct the final user study using the same format (with Google Forms) and with similar buddy code snippets, preferably this time with functionality that we would want to highlight that our project implements.
