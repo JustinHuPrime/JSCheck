@@ -1,5 +1,6 @@
 let person = {name: "Bob", age: 25};
 let age = person.age;
+let name = person['name'];
 person.age = 30;
 person["address"] = "123 First Street";
 

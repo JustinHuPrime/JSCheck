@@ -269,7 +269,7 @@ export default class TypeVisitor {
   private visitMemberExpression(node: t.MemberExpression): Type {
     let objectType = this.visitExpression(node.object);
     let propertyType = null; // for arrays
-    let propertyName; // for object
+    let propertyName; // for objects
     if (t.isExpression(node.property)) {
       if (node.computed) {
         // Identifiers can be used for static object accesses (`obj.x`) or variable references in a computed property

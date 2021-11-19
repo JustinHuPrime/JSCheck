@@ -110,8 +110,9 @@ describe("Integration Tests", () => {
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
-    assert.equal(symbolTable.size, 2);
+    assert.equal(symbolTable.size, 3);
     assert.deepEqual(symbolTable.get("age"), new NumberType());
+    assert.deepEqual(symbolTable.get("name"), new StringType());
     assert.deepEqual(
       symbolTable.get("person"),
       new ObjectType({
