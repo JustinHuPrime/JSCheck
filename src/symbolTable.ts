@@ -207,6 +207,16 @@ export class UnionType extends Type {
   }
 }
 
+export class ErrorType extends Type {
+  public toString() {
+    return "error-type";
+  }
+
+  public isIterable(): boolean {
+    return false;
+  }
+}
+
 export class AnyType extends Type {
   public toString() {
     return "any type";
@@ -217,10 +227,6 @@ export class AnyType extends Type {
   }
 
   public override getSpreadType(): Type {
-    return UnionType.asNeeded([
-      new StringType(),
-      new ArrayType(new AnyType()),
-      new ObjectType({}),
-    ]);
+    return new AnyType();
   }
 }
