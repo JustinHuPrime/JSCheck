@@ -85,7 +85,6 @@ export default class TypeChecker {
         this.visitors.set(filename, new TypeVisitor(filename));
 
         this.visitors.get(filename)?.visitProgram(file as unknown as t.File);
-        // TODO: traverse the AST and save error reports to a global structure as you go
       });
   }
 
