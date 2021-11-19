@@ -4,6 +4,7 @@ import assert = require("assert");
 import SymbolTable, {
   ArrayType, ErrorType,
   NumberType,
+  ObjectType,
   StringType,
   UnionType,
 } from "../src/symbolTable";
@@ -81,6 +82,7 @@ describe("Integration Tests", () => {
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
     let unionType = UnionType.asNeeded([new StringType(), new NumberType()]);
+    assert.equal(symbolTable.size, 3);
     assert.deepEqual(symbolTable.get("lst"), new ArrayType(unionType));
     assert.deepEqual(symbolTable.get("x"), new NumberType());
     assert.deepEqual(symbolTable.get("y"), unionType);
@@ -98,6 +100,25 @@ describe("Integration Tests", () => {
         ["lst", new ArrayType(new NumberType())],
         ["x", new NumberType()],
       ]),
+    );
+  });
+
+  it("Objects: declaration, reading, assigning with single type properties", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-single-type.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 3);
+    assert.deepEqual(symbolTable.get("age"), new NumberType());
+    assert.deepEqual(symbolTable.get("name"), new StringType());
+    assert.deepEqual(
+      symbolTable.get("person"),
+      new ObjectType({
+        age: new NumberType(),
+        name: new StringType(),
+        address: new StringType(),
+      }),
     );
   });
 

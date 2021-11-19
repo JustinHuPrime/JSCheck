@@ -6,6 +6,7 @@ import SymbolTable, {
   ErrorType,
   NullType,
   NumberType,
+  ObjectType,
   StringType,
   Type,
   UndefinedType,
@@ -72,6 +73,8 @@ export default class TypeVisitor {
         return new NumberType();
       case "ArrayExpression":
         return this.visitArrayExpression(node);
+      case "ObjectExpression":
+        return this.visitObjectExpression(node);
       case "AssignmentExpression":
         // assignments to existing vars, like `x = 5;`
         return this.visitAssignmentExpression(node);
@@ -124,16 +127,18 @@ export default class TypeVisitor {
           // Dynamic property assignments in the form `obj[fieldName]` are NOT supported as the field name can vary at runtime
           // We assume that all assignments to arrays are in range - i.e. ignoring potentially undefined elements added in between
           let lhsType = this.visitExpression(node.left.object);
-          let indexOrPropertyType = null;
+          let indexType = null; // Only used for arrays
+          let propertyName; // Only used for objects
           if (t.isExpression(node.left.property)) {
-            indexOrPropertyType = this.visitExpression(node.left.property);
+            indexType = this.visitExpression(node.left.property);
+            propertyName = this.getObjectPropertyName(node.left.property);
           }
           let lhsIsVariable = t.isIdentifier(node.left.object);
 
           if (lhsIsVariable) {
             if (
               lhsType instanceof ArrayType &&
-              indexOrPropertyType instanceof NumberType
+              indexType instanceof NumberType
             ) {
               // if the LHS is a variable, update its type
               let newListType = new ArrayType(
@@ -143,8 +148,9 @@ export default class TypeVisitor {
                 (node.left.object as t.Identifier).name,
                 newListType,
               );
+            } else if (lhsType instanceof ObjectType && propertyName) {
+              lhsType.fields[propertyName] = rhsType;
             } else {
-              // TODO: support objects
               console.warn(
                 `visitAssignmentExpression: unsupported assignment type for node ${node}.`,
               );
@@ -215,6 +221,37 @@ export default class TypeVisitor {
     }
   }
 
+  private getObjectPropertyName(node: t.Expression) {
+    if (t.isIdentifier(node)) {
+      // Key is a static name, accessed as in the style `obj.x`
+      return node.name;
+    } else if (t.isLiteral(node) && "value" in node) {
+      // If it's a computed name, we only handle cases when they are literals
+      // (coerce them into a string if they have a value, and fail otherwise)
+      return node.value.toString();
+    } else {
+      console.warn(
+        `getObjectPropertyName: unsupported object property name (${node})`,
+      );
+      return undefined;
+    }
+  }
+
+  private visitObjectExpression(node: t.ObjectExpression): Type {
+    let fields: { [key: string]: Type } = {};
+    for (let property of node.properties) {
+      if (t.isObjectProperty(property) && t.isExpression(property.value)) {
+        // we don't support object methods
+        let propertyName = this.getObjectPropertyName(property.key);
+        if (propertyName) {
+          fields[propertyName] = this.visitExpression(property.value);
+        }
+      }
+      // TODO: spread expressions
+    }
+    return new ObjectType(fields);
+  }
+
   private visitArraySpreadElement(node: t.SpreadElement): Type {
     let type: Type = this.visitExpression(node.argument);
     if (!type.isIterable()) {
@@ -249,20 +286,34 @@ export default class TypeVisitor {
 
   private visitMemberExpression(node: t.MemberExpression): Type {
     let objectType = this.visitExpression(node.object);
-    let propertyType = null;
+    let propertyType = null; // for arrays
+    let propertyName; // for objects
     if (t.isExpression(node.property)) {
-      propertyType = this.visitExpression(node.property);
+      if (node.computed) {
+        // Identifiers can be used for static object accesses (`obj.x`) or variable references in a computed property
+        // We only want to visit the property as an expression in the latter case, because `x` might not be a variable
+        // in scope
+        propertyType = this.visitExpression(node.property);
+      }
+      propertyName = this.getObjectPropertyName(node.property);
     }
 
     if (objectType instanceof ArrayType && propertyType instanceof NumberType) {
-      return objectType.elementType;
+      return objectType.elementType; // Array index (numbers only; associative arrays are not supported)
+    } else if (
+      objectType instanceof StringType &&
+      propertyType instanceof NumberType
+    ) {
+      return objectType; // String index. TODO: Add a test for this
+    } else if (objectType instanceof ObjectType && propertyName) {
+      let propertyValueType = objectType.fields[propertyName];
+      return propertyValueType || new UndefinedType();
     }
-    // TODO: handle objects
 
     console.warn(
       `visitMemberExpression: unsupported property access (${propertyType} on ${objectType})`,
     );
     console.debug(node);
-    return new AnyType();
+    return new UndefinedType();
   }
 }
