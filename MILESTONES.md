@@ -44,3 +44,11 @@ In the other code snippets, the default JavaScript error did not specify a type 
 Participants also stated that they found the more-verbose error messages too confusing, that they may be providing too much information. These verbose errors commonly included warnings. Hence, we conclude that we should minimize the number of warnings that are shown to the user, or at least give them the option to suppress warnings. It is important to note that the code snippets in our user studies is somewhat contrived; therefore, users might find more value in these warnings for more complex cases with multiple code paths.
 
 We will be having further discussions on the appropriate level of information given by our type checker at a later date.
+
+# Milestone 4
+
+Plans for final user study:
+
+We plan to conduct the final user study using the same format (with Google Forms) and with similar buddy code snippets, preferably this time with functionality that we would want to highlight that our project implements.
+
+In addition, this time, we would also want to only show error messages that we will be implementing (likely error messages with some sort of type information).
