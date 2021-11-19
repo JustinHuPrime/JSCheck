@@ -100,4 +100,35 @@ describe("Integration Tests", () => {
       ]),
     );
   });
+
+  it("Lists: should spread iterables", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-supported-spread.js",
+    ]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["a", new StringType()],
+        ["b", new ArrayType(new StringType())],
+      ]),
+    );
+  })
+
+  it("Lists: should contain error when trying to spread non-iterable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-unsupported-spread.js",
+    ]).getMap();
+
+    assert.equal(report.getErrors().length, 1);
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["a", new ArrayType(new ErrorType())],
+      ]),
+    );
+  })
 });
