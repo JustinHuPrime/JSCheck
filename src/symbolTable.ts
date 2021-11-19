@@ -96,12 +96,12 @@ export class NullType extends Type {
 
 // compound types
 export class ObjectType extends Type {
-  public fields: [string | number, Type][] = [];
+  public fields: { [key: string]: Type };
   public toString() {
     return `object with fields: ${this.fields}`;
   }
 
-  constructor(fields: [string | number, Type][]) {
+  constructor(fields: { [key: string]: Type }) {
     super();
     this.fields = fields;
   }
@@ -111,11 +111,7 @@ export class ObjectType extends Type {
   }
 
   public override getSpreadType(): Type {
-    return UnionType.asNeeded(
-      this.fields.map((value) => {
-        return value[1];
-      }),
-    );
+    return UnionType.asNeeded(Object.values(this.fields));
   }
 }
 
@@ -224,7 +220,7 @@ export class AnyType extends Type {
     return UnionType.asNeeded([
       new StringType(),
       new ArrayType(new AnyType()),
-      new ObjectType([]),
+      new ObjectType({}),
     ]);
   }
 }
