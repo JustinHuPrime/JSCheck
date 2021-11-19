@@ -101,4 +101,23 @@ describe("Integration Tests", () => {
       ]),
     );
   });
+
+  it("Should support reference to string indices", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/string-indices.js",
+    ]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["a", new StringType()],
+        ["b", new StringType()],
+        ["c", new StringType()],
+        ["d", new NumberType()],
+        ["k", new StringType()]
+      ])
+    )
+  })
 });
