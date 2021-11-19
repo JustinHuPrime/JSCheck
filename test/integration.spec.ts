@@ -2,7 +2,8 @@ import report from "../src/errorReport";
 import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
 import SymbolTable, {
-  ArrayType, ErrorType,
+  ArrayType,
+  ErrorType,
   NumberType,
   ObjectType,
   StringType,
@@ -136,7 +137,7 @@ describe("Integration Tests", () => {
         ["b", new ArrayType(new StringType())],
       ]),
     );
-  })
+  });
 
   it("Lists: should contain error when trying to spread non-iterable", () => {
     let symbolTable = typecheckFiles([
@@ -147,9 +148,7 @@ describe("Integration Tests", () => {
 
     assert.deepEqual(
       symbolTable,
-      new Map([
-        ["a", new ArrayType(new ErrorType())],
-      ]),
+      new Map([["a", new ArrayType(new ErrorType())]]),
     );
-  })
+  });
 });

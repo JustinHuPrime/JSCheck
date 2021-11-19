@@ -68,7 +68,6 @@ export default class TypeVisitor {
       case "BooleanLiteral":
         return new BooleanType();
       case "NumericLiteral":
-      case "BigIntLiteral":
       case "DecimalLiteral":
         return new NumberType();
       case "ArrayExpression":
@@ -84,12 +83,180 @@ export default class TypeVisitor {
       case "MemberExpression":
         // Reference to an array index or object property
         return this.visitMemberExpression(node);
+      case "BinaryExpression":
+        return this.visitBinaryExpression(node);
+      case "SequenceExpression":
+        return this.visitSequenceExpression(node);
+      case "LogicalExpression":
+        return this.visitLogicalExpression(node);
+      case "UnaryExpression":
+        return this.visitUnaryExpression(node);
+      case "ConditionalExpression":
+        return this.visitConditionalExpression(node);
       default:
         console.debug(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
         );
         console.debug(node);
         return new AnyType();
+    }
+  }
+
+  public visitConditionalExpression(node: t.ConditionalExpression): Type {
+    const testType = this.visitExpression(node.test);
+    if (testType.alwaysTrue()) {
+      return this.visitExpression(node.consequent);
+    } else if (testType.alwaysFalse()) {
+      return this.visitExpression(node.alternate);
+    } else {
+      return UnionType.asNeeded([
+        this.visitExpression(node.consequent),
+        this.visitExpression(node.alternate),
+      ]);
+    }
+  }
+
+  public visitLogicalExpression(node: t.LogicalExpression): Type {
+    const leftType: Type = this.visitExpression(node.left);
+    switch (node.operator) {
+      case "||": {
+        if (leftType.alwaysFalse()) {
+          return this.visitExpression(node.right);
+        } else if (leftType.alwaysTrue()) {
+          return leftType;
+        } else {
+          return UnionType.asNeeded([
+            leftType,
+            this.visitExpression(node.right),
+          ]); // TODO: remove alwaysTrue and alwaysFalse from leftType
+        }
+      }
+      case "&&": {
+        if (leftType.alwaysTrue()) {
+          return this.visitExpression(node.right);
+        } else if (leftType.alwaysFalse()) {
+          return leftType;
+        } else {
+          return UnionType.asNeeded([
+            leftType,
+            this.visitExpression(node.right),
+          ]); // TODO: remove alwaysTrue and alwaysFalse from leftType
+        }
+      }
+      case "??": {
+        if (leftType.alwaysFalse()) {
+          return this.visitExpression(node.right);
+        } else {
+          return UnionType.asNeeded([
+            leftType,
+            this.visitExpression(node.right),
+          ]); // TODO: remove alwaysFalse from leftType
+        }
+      }
+    }
+  }
+
+  public visitSequenceExpression(node: t.SequenceExpression): Type {
+    let last!: Type;
+    node.expressions.forEach((expr) => {
+      last = this.visitExpression(expr);
+    });
+    return last;
+  }
+
+  public visitBinaryExpression(node: t.BinaryExpression): Type {
+    // TODO: I'm assuming that types never have an exotic toPrimitive
+    // TODO: also assuming that node.left is never a PrivateName (exported object with no associated exported class)
+    const leftType = this.visitExpression(node.left as t.Expression);
+    const rightType = this.visitExpression(node.right);
+    switch (node.operator) {
+      case "+": {
+        const lprim = leftType.toPrimitive();
+        const rprim = rightType.toPrimitive();
+        if (lprim instanceof AnyType || rprim instanceof AnyType) {
+          return new AnyType();
+        } else if (lprim instanceof StringType || rprim instanceof StringType) {
+          return new StringType();
+        } else {
+          return new NumberType();
+        }
+      }
+      case "-":
+      case "/":
+      case "%":
+      case "*":
+      case "**":
+      case "&":
+      case "|":
+      case ">>":
+      case ">>>":
+      case "<<":
+      case "^": {
+        return new NumberType();
+      }
+      case "==":
+      case "===":
+      case "!=":
+      case "!==":
+      case ">":
+      case "<":
+      case ">=":
+      case "<=": {
+        return new BooleanType();
+      }
+      case "in": {
+        if (
+          !(rightType instanceof ObjectType || rightType instanceof AnyType)
+        ) {
+          report.addError(
+            `cannot use 'in' on non-object; given a ${rightType}`,
+            "", // TODO: missing filename
+            node.loc?.start.line,
+            node.loc?.start.column,
+          );
+        }
+        return new BooleanType();
+      }
+      case "instanceof": {
+        if (
+          !(rightType instanceof ObjectType || rightType instanceof AnyType)
+        ) {
+          report.addError(
+            `cannot use 'instanceof' on non-object; given a ${rightType}`,
+            "", // TODO: missing filename
+            node.loc?.start.line,
+            node.loc?.start.column,
+          );
+        }
+        return new BooleanType();
+      }
+    }
+  }
+
+  public visitUnaryExpression(node: t.UnaryExpression): Type {
+    this.visitExpression(node.argument);
+    switch (node.operator) {
+      case "void": {
+        return new UndefinedType();
+      }
+      case "delete": {
+        return new BooleanType();
+      }
+      case "!":
+      case "+":
+      case "-":
+      case "~": {
+        return new NumberType();
+      }
+      case "typeof": {
+        return new StringType();
+      }
+      default: {
+        console.log(
+          `encountered unsupported UnaryExpression ${node} (operator was ${node.operator})`,
+        );
+        return new AnyType();
+      }
     }
   }
 
@@ -189,7 +356,7 @@ export default class TypeVisitor {
     this.setVariableType(node.id.name, foundType);
   }
 
-  private visitArrayExpression(node: t.ArrayExpression) {
+  private visitArrayExpression(node: t.ArrayExpression): Type {
     if (node.elements == null) {
       return new ArrayType(new AnyType());
     } else {

@@ -27,6 +27,9 @@ export abstract class Type {
   public getSpreadType(): Type {
     throw new Error(`${this} isn't iterable`);
   }
+  public abstract toPrimitive(): Type;
+  public abstract alwaysFalse(): boolean;
+  public abstract alwaysTrue(): boolean;
 }
 
 // base types
@@ -36,6 +39,16 @@ export class NumberType extends Type {
   }
 
   public isIterable(): boolean {
+    return false;
+  }
+
+  public toPrimitive(): Type {
+    return new NumberType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
     return false;
   }
 }
@@ -52,6 +65,16 @@ export class StringType extends Type {
   public override getSpreadType(): Type {
     return this;
   }
+
+  public toPrimitive(): Type {
+    return new StringType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
+    return false;
+  }
 }
 
 export class BooleanType extends Type {
@@ -62,14 +85,14 @@ export class BooleanType extends Type {
   public isIterable(): boolean {
     return false;
   }
-}
 
-export class VoidType extends Type {
-  public toString() {
-    return "void";
+  public toPrimitive(): Type {
+    return new BooleanType();
   }
-
-  public isIterable(): boolean {
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
     return false;
   }
 }
@@ -82,6 +105,16 @@ export class UndefinedType extends Type {
   public isIterable(): boolean {
     return false;
   }
+
+  public toPrimitive(): Type {
+    return new UndefinedType();
+  }
+  public alwaysFalse(): boolean {
+    return true;
+  }
+  public alwaysTrue(): boolean {
+    return false;
+  }
 }
 
 export class NullType extends Type {
@@ -90,6 +123,16 @@ export class NullType extends Type {
   }
 
   public isIterable(): boolean {
+    return false;
+  }
+
+  public toPrimitive(): Type {
+    return new NullType();
+  }
+  public alwaysFalse(): boolean {
+    return true;
+  }
+  public alwaysTrue(): boolean {
     return false;
   }
 }
@@ -113,6 +156,16 @@ export class ObjectType extends Type {
   public override getSpreadType(): Type {
     return UnionType.asNeeded(Object.values(this.fields));
   }
+
+  public toPrimitive(): Type {
+    return new StringType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
+    return true;
+  }
 }
 
 export class ArrayType extends Type {
@@ -133,6 +186,16 @@ export class ArrayType extends Type {
   public override getSpreadType(): Type {
     return this.elementType;
   }
+
+  public toPrimitive(): Type {
+    return new StringType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
+    return true;
+  }
 }
 
 export class FunctionType extends Type {
@@ -150,6 +213,16 @@ export class FunctionType extends Type {
 
   public isIterable(): boolean {
     return false;
+  }
+
+  public toPrimitive(): Type {
+    return new FunctionType(this.params, this.returnType);
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
+    return true;
   }
 }
 
@@ -205,6 +278,20 @@ export class UnionType extends Type {
     this.types = this.types.filter((type) => type.isIterable());
     return this;
   }
+
+  public toPrimitive(): Type {
+    return UnionType.asNeeded(
+      this.types.map((type, _index, _array) => {
+        return type.toPrimitive();
+      }),
+    );
+  }
+  public alwaysFalse(): boolean {
+    return this.types.every((type) => type.alwaysFalse());
+  }
+  public alwaysTrue(): boolean {
+    return this.types.every((type) => type.alwaysTrue());
+  }
 }
 
 export class ErrorType extends Type {
@@ -213,6 +300,16 @@ export class ErrorType extends Type {
   }
 
   public isIterable(): boolean {
+    return false;
+  }
+
+  public toPrimitive(): Type {
+    return new ErrorType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
     return false;
   }
 }
@@ -228,5 +325,15 @@ export class AnyType extends Type {
 
   public override getSpreadType(): Type {
     return new AnyType();
+  }
+
+  public toPrimitive(): Type {
+    return new AnyType();
+  }
+  public alwaysFalse(): boolean {
+    return false;
+  }
+  public alwaysTrue(): boolean {
+    return false;
   }
 }
