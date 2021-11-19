@@ -49,6 +49,9 @@ export default class TypeVisitor {
       case "BlockStatement":
         node.body.forEach((stmt) => this.visitStatement(stmt));
         break;
+      case "IfStatement":
+        this.visitIfStatement(node);
+        break;
       default:
         console.debug(
           `visitStatement: node of type ${node.type} not supported, skipping.`,
@@ -91,8 +94,7 @@ export default class TypeVisitor {
   }
 
   public getVariableType(variableName: string, node: t.Node): Type {
-    let mapping = this.symbolTable.getMap();
-    let type = mapping.get(variableName);
+    let type = this.symbolTable.getVar(variableName);
     if (type == null) {
       report.addError(
         `Reference to unknown variable ${variableName}`,
@@ -106,8 +108,7 @@ export default class TypeVisitor {
   }
 
   public setVariableType(variableName: string, newType: Type) {
-    let mapping = this.symbolTable.getMap();
-    return mapping.set(variableName, newType);
+    this.symbolTable.setVar(variableName, newType);
   }
 
   // Assignments to existing vars, e.g. `x = 5;`
@@ -264,5 +265,35 @@ export default class TypeVisitor {
     );
     console.debug(node);
     return new AnyType();
+  }
+
+  private visitIfStatement(node: t.IfStatement) {
+    let testType = this.visitExpression(node.test);
+    if (!this.containsBoolean(testType)) {
+      report.addError(
+        `If condition does not produce a boolean, instead produces ${testType}`,
+        "",
+        node.test.loc?.start.line,
+        node.test.loc?.start.column,
+      );
+    }
+    let initialEnv = this.symbolTable;
+    let trueEnv = new SymbolTable(initialEnv);
+    this.symbolTable = trueEnv;
+    this.visitStatement(node.consequent);
+    console.log(`True env:`);
+    if (t.isStatement(node.alternate)) {
+      this.symbolTable = new SymbolTable(initialEnv);
+      this.visitStatement(node.alternate);
+      trueEnv.merge(this.symbolTable);
+      initialEnv.replace(trueEnv);
+    } else {
+      initialEnv = trueEnv.mergeUp();
+    }
+    this.symbolTable = initialEnv;
+  }
+
+  private containsBoolean(testType: Type) {
+    return testType.type.indexOf(new BooleanType().type) != -1;
   }
 }

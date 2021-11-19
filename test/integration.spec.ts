@@ -2,7 +2,9 @@ import report from "../src/errorReport";
 import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
 import SymbolTable, {
-  ArrayType, ErrorType,
+  ArrayType,
+  BooleanType,
+  ErrorType,
   NumberType,
   StringType,
   UnionType,
@@ -115,7 +117,7 @@ describe("Integration Tests", () => {
         ["b", new ArrayType(new StringType())],
       ]),
     );
-  })
+  });
 
   it("Lists: should contain error when trying to spread non-iterable", () => {
     let symbolTable = typecheckFiles([
@@ -126,9 +128,54 @@ describe("Integration Tests", () => {
 
     assert.deepEqual(
       symbolTable,
+      new Map([["a", new ArrayType(new ErrorType())]]),
+    );
+  });
+
+  it("If statement: assignment in branches", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-simple.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
       new Map([
-        ["a", new ArrayType(new ErrorType())],
+        ["x", UnionType.asNeeded([new BooleanType(), new StringType()])],
       ]),
     );
-  })
+  });
+
+  it("If statement: with no else", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-no-else.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", UnionType.asNeeded([new NumberType(), new StringType()])],
+        [
+          "y",
+          UnionType.asNeeded([
+            new BooleanType(),
+            new NumberType(),
+            new StringType(),
+          ]),
+        ],
+      ]),
+    );
+  });
+
+  it("Union test", () => {
+    assert.deepEqual(UnionType.asNeeded([new StringType()]), new StringType());
+    assert.deepEqual(
+      UnionType.asNeeded([
+        new StringType(),
+        UnionType.asNeeded([new StringType(), new NumberType()]),
+      ]),
+      UnionType.asNeeded([new StringType(), new NumberType()]),
+    );
+  });
 });

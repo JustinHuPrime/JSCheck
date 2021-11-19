@@ -7,6 +7,14 @@ export default class SymbolTable {
     this.parentScope = parentScope;
   }
 
+  getVar(key: string): Type | undefined {
+    return this.mapping.get(key);
+  }
+
+  setVar(key: string, value: Type): void {
+    this.mapping.set(key, value);
+  }
+
   getMap() {
     // XXX: just for testing so far - we may want a neater API later
     return this.mapping;
@@ -15,6 +23,37 @@ export default class SymbolTable {
   getParentScope() {
     // XXX: just for testing so far - we may want a neater API later
     return this.parentScope;
+  }
+
+  // Does not create new definitions in this, just adds to existing
+  merge(other: SymbolTable) {
+    let otherMapping = other.mapping;
+    this.mapping.forEach((value, key, map) => {
+      if (otherMapping.has(key)) {
+        let otherVal = otherMapping.get(key);
+        if (!value.equal(otherVal!)) {
+          map.set(key, UnionType.asNeeded([value, otherVal!]));
+        }
+        otherMapping.delete(key);
+      }
+    });
+    otherMapping.forEach((value, key) => {
+      this.mapping.set(key, value);
+    });
+  }
+
+  replace(otherEnv: SymbolTable) {
+    otherEnv.mapping.forEach((value, key) => {
+      this.mapping.set(key, value);
+    });
+  }
+
+  mergeUp(): SymbolTable {
+    if (this.parentScope !== null) {
+      this.parentScope.merge(this);
+      return this.parentScope.mergeUp();
+    }
+    return this;
   }
 }
 
@@ -26,6 +65,9 @@ export abstract class Type {
   public abstract isIterable(): boolean;
   public getSpreadType(): Type {
     throw new Error(`${this} isn't iterable`);
+  }
+  public equal(other: Type): boolean {
+    return this.type === other.type;
   }
 }
 
