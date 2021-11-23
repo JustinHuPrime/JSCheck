@@ -2,17 +2,17 @@
  * Flatten a list of lists (arrays) and return the result
  */
 
-    const arrays = [
-        [4,5,6], [7,8,9], [1,2,3]
-    ];
+const arrays = [
+    [4,5,6], [7,8,9], [1,2,3]
+];
 
-    let output = [];
+let output = [];
 
-    for (let array of arrays) {
-        output += array;
-    }
+for (let array of arrays) {
+    output += array;
+}
 
-    output.sort();
+output.sort();
 
 
 

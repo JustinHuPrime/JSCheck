@@ -10,25 +10,25 @@
  */
 const inputs = [...Array(20).keys()];
 
-    let outputs = [];
-    if (inputs % 15 == 0) {
-        outputs.push("Fizzbuzz");
-    }
-    else if (inputs % 3 === 0) {
-        outputs.push("Fizz");
-    }
-    else if (inputs % 5 === 0) {
-        outputs.push("Buzz");
-    } else {
-        outputs.push(inputs);
-    }
+let outputs = [];
+if (inputs % 15 == 0) {
+    outputs.push("Fizzbuzz");
+}
+else if (inputs % 3 === 0) {
+    outputs.push("Fizz");
+}
+else if (inputs % 5 === 0) {
+    outputs.push("Buzz");
+} else {
+    outputs.push(inputs);
+}
 
-    let result = 0;
-    for (let value of lst) {
-        if (value.match(/buzz/i)) {
-            result += 1;
-        }
+let result = 0;
+for (let value of lst) {
+    if (value.match(/buzz/i)) {
+        result += 1;
     }
+}
 
 /**
  * (Level 1 Default JS) TypeError: value.match is not a function (35:19)
