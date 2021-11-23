@@ -1,3 +1,5 @@
+export type TypeMap = { [key: string]: Type };
+
 export default class SymbolTable {
   private mapping: Map<string, Type>;
   private parentScope: SymbolTable | null;
@@ -24,12 +26,28 @@ export abstract class Type {
   public abstract toString(): string;
 
   public abstract isIterable(): boolean;
+
   public getSpreadType(): Type {
     throw new Error(`${this} isn't iterable`);
   }
+
   public abstract toPrimitive(): Type;
+
   public abstract alwaysFalse(): boolean;
+
   public abstract alwaysTrue(): boolean;
+
+  protected getMethodReturnTypeMap(): TypeMap {
+    return {};
+  }
+
+  // Returns the type of calling the given object / property method,
+  // or null if the method name does not exist
+  // This does not check types of input values
+  public getMethodReturnType(methodName: string): Type | null {
+    let methodMap = this.getMethodReturnTypeMap();
+    return methodMap[methodName] || null;
+  }
 }
 
 // base types
@@ -50,6 +68,17 @@ export class NumberType extends Type {
   }
   public alwaysTrue(): boolean {
     return false;
+  }
+
+  override getMethodReturnTypeMap(): TypeMap {
+    return {
+      toExponential: new StringType(),
+      toFixed: new StringType(),
+      toLocaleString: new StringType(),
+      toPrecision: new StringType(),
+      toString: new StringType(),
+      valueOf: this,
+    };
   }
 }
 
@@ -75,6 +104,45 @@ export class StringType extends Type {
   public alwaysTrue(): boolean {
     return false;
   }
+
+  override getMethodReturnTypeMap(): TypeMap {
+    return {
+      at: new StringType(),
+      charAt: new StringType(),
+      charCodeAt: new NumberType(),
+      codePointAt: new NumberType(),
+      concat: new StringType(),
+      includes: new BooleanType(),
+      endsWith: new BooleanType(),
+      indexOf: new NumberType(),
+      lastIndexOf: new NumberType(),
+      localeCompare: new NumberType(),
+      match: UnionType.asNeeded([
+        new ArrayType(new StringType()),
+        new NullType(),
+      ]),
+      matchAll: new AnyType(), // XXX: iterable types not supported
+      normalize: new StringType(),
+      padEnd: new StringType(),
+      padStart: new StringType(),
+      replace: new StringType(),
+      replaceAll: new StringType(),
+      search: UnionType.asNeeded([new StringType(), new NumberType()]),
+      slice: new StringType(),
+      split: new StringType(),
+      startsWith: new StringType(),
+      substring: new StringType(),
+      toLocaleLowerCase: new StringType(),
+      toLocaleUpperCase: new StringType(),
+      toLowerCase: new StringType(),
+      toUpperCase: new StringType(),
+      toString: new StringType(),
+      trim: new StringType(),
+      trimStart: new StringType(),
+      trimEnd: new StringType(),
+      valueOf: this,
+    };
+  }
 }
 
 export class BooleanType extends Type {
@@ -94,6 +162,13 @@ export class BooleanType extends Type {
   }
   public alwaysTrue(): boolean {
     return false;
+  }
+
+  override getMethodReturnTypeMap(): TypeMap {
+    return {
+      toString: new StringType(),
+      valueOf: this,
+    };
   }
 }
 
@@ -139,12 +214,12 @@ export class NullType extends Type {
 
 // compound types
 export class ObjectType extends Type {
-  public fields: { [key: string]: Type };
+  public fields: TypeMap;
   public toString() {
     return `object with fields: ${this.fields}`;
   }
 
-  constructor(fields: { [key: string]: Type }) {
+  constructor(fields: TypeMap) {
     super();
     this.fields = fields;
   }
@@ -165,6 +240,19 @@ export class ObjectType extends Type {
   }
   public alwaysTrue(): boolean {
     return true;
+  }
+
+  override getMethodReturnTypeMap(): TypeMap {
+    return {
+      // I'm ignoring the __ methods for now
+      // FIXME: add support for object methods
+      hasOwnProperty: new BooleanType(),
+      isPrototypeOf: new BooleanType(),
+      propertyIsEnumerable: new BooleanType(),
+      toLocaleString: new StringType(),
+      toString: new StringType(),
+      valueOf: this,
+    };
   }
 }
 
@@ -196,6 +284,18 @@ export class ArrayType extends Type {
   public alwaysTrue(): boolean {
     return true;
   }
+  override getMethodReturnTypeMap(): TypeMap {
+    return {
+      // I'm ignoring the __ methods for now
+      at: this.getSpreadType(),
+      concat: this.getSpreadType(),
+      isPrototypeOf: new BooleanType(),
+      propertyIsEnumerable: new BooleanType(),
+      toLocaleString: new StringType(),
+      toString: new StringType(),
+      valueOf: this,
+    };
+  }
 }
 
 export class FunctionType extends Type {
@@ -224,6 +324,7 @@ export class FunctionType extends Type {
   public alwaysTrue(): boolean {
     return true;
   }
+  // TODO: define getMethodReturnTypeMap
 }
 
 // computed types
@@ -291,6 +392,19 @@ export class UnionType extends Type {
   }
   public alwaysTrue(): boolean {
     return this.types.every((type) => type.alwaysTrue());
+  }
+  // TODO: getMethodReturnTypeMap
+  override getMethodReturnType(methodName: string): Type | null {
+    let returnTypes = [];
+    for (let subType of this.types) {
+      let returnType = subType.getMethodReturnType(methodName);
+      if (returnType == null) {
+        return null;
+      } else {
+        returnTypes.push(subType);
+      }
+    }
+    return UnionType.asNeeded(returnTypes);
   }
 }
 
