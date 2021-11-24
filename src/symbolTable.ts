@@ -43,7 +43,7 @@ export abstract class Type {
 
   // Returns the type of calling the given object / property method,
   // or null if the method name does not exist
-  // This does not check types of input values
+  // This does not the check types of input values yet
   public getMethodReturnType(methodName: string): Type | null {
     let methodMap = this.getMethodReturnTypeMap();
     return methodMap[methodName] || null;
@@ -286,14 +286,41 @@ export class ArrayType extends Type {
   }
   override getMethodReturnTypeMap(): TypeMap {
     return {
-      // I'm ignoring the __ methods for now
-      at: this.getSpreadType(),
-      concat: this.getSpreadType(),
-      isPrototypeOf: new BooleanType(),
-      propertyIsEnumerable: new BooleanType(),
+      at: this.elementType,
+      concat: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      entries: new AnyType(), // XXX: no support for iterable types yet
+      every: new BooleanType(),
+      fill: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      filter: this,
+      find: UnionType.asNeeded([new UndefinedType(), this.elementType]),
+      findIndex: new NumberType(),
+
+      // XXX: skipping flat and flatMap as their types are quite complicated
+      flat: new ArrayType(new AnyType()),
+      flatMap: new ArrayType(new AnyType()),
+
+      forEach: new UndefinedType(),
+      includes: new BooleanType(),
+      indexOf: new NumberType(),
+      join: new StringType(),
+      keys: new AnyType(), // XXX: no support for iterable types yet
+      lastIndexOf: new NumberType(),
+      map: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      pop: this.elementType,
+      push: new NumberType(),
+      reduce: new AnyType(),
+      reduceRight: new AnyType(),
+      reverse: this,
+      shift: this.elementType,
+      slice: this,
+      some: new BooleanType(),
+      sort: this,
+      splice: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
       toLocaleString: new StringType(),
       toString: new StringType(),
+      unshift: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
       valueOf: this,
+      values: new AnyType(), // XXX: no support for iterable types yet
     };
   }
 }
@@ -399,6 +426,7 @@ export class UnionType extends Type {
     for (let subType of this.types) {
       let returnType = subType.getMethodReturnType(methodName);
       if (returnType == null) {
+        // One or more items in the union don't implement the requested method
         return null;
       } else {
         returnTypes.push(subType);
