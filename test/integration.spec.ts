@@ -78,7 +78,7 @@ describe("Integration Tests", () => {
 
   it("Lists: declaration, reading/assigning items", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/lists.js",
+      "./test/test-examples/lists-index-read-assignment.js",
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
