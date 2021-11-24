@@ -37,15 +37,18 @@ export abstract class Type {
 
   public abstract alwaysTrue(): boolean;
 
-  protected getMethodReturnTypeMap(): TypeMap {
+  protected getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {};
   }
 
   // Returns the type of calling the given object / property method,
   // or null if the method name does not exist
   // This does not the check types of input values yet
-  public getMethodReturnType(methodName: string): Type | null {
-    let methodMap = this.getMethodReturnTypeMap();
+  public getMethodReturnType(
+    methodName: string,
+    inputArgTypes: Type[],
+  ): Type | null {
+    let methodMap = this.getMethodReturnTypeMap(inputArgTypes);
     return methodMap[methodName] || null;
   }
 }
@@ -70,7 +73,7 @@ export class NumberType extends Type {
     return false;
   }
 
-  override getMethodReturnTypeMap(): TypeMap {
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {
       toExponential: new StringType(),
       toFixed: new StringType(),
@@ -105,7 +108,7 @@ export class StringType extends Type {
     return false;
   }
 
-  override getMethodReturnTypeMap(): TypeMap {
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {
       at: new StringType(),
       charAt: new StringType(),
@@ -164,7 +167,7 @@ export class BooleanType extends Type {
     return false;
   }
 
-  override getMethodReturnTypeMap(): TypeMap {
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {
       toString: new StringType(),
       valueOf: this,
@@ -242,7 +245,7 @@ export class ObjectType extends Type {
     return true;
   }
 
-  override getMethodReturnTypeMap(): TypeMap {
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {
       // I'm ignoring the __ methods for now
       // FIXME: add support for object methods
@@ -284,13 +287,19 @@ export class ArrayType extends Type {
   public alwaysTrue(): boolean {
     return true;
   }
-  override getMethodReturnTypeMap(): TypeMap {
+
+  // Return an array type including the current + new types
+  public extend(newTypes: Type[]): ArrayType {
+    return new ArrayType(UnionType.asNeeded([this.elementType, ...newTypes]));
+  }
+
+  override getMethodReturnTypeMap(inputArgTypes: Type[]): TypeMap {
     return {
       at: this.elementType,
-      concat: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      concat: this.extend([inputArgTypes[0] ?? new AnyType()]),
       entries: new AnyType(), // XXX: no support for iterable types yet
       every: new BooleanType(),
-      fill: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      fill: this.extend([inputArgTypes[0] ?? new AnyType()]),
       filter: this,
       find: UnionType.asNeeded([new UndefinedType(), this.elementType]),
       findIndex: new NumberType(),
@@ -305,23 +314,40 @@ export class ArrayType extends Type {
       join: new StringType(),
       keys: new AnyType(), // XXX: no support for iterable types yet
       lastIndexOf: new NumberType(),
-      map: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+
+      // XXX: this is a stub because we don't support type checking functions yet
+      map: new ArrayType(new AnyType()),
+
       pop: this.elementType,
-      push: new NumberType(),
+      push: new NumberType(), // side effects
+
+      // XXX: this is a stub because we don't support type checking functions yet
       reduce: new AnyType(),
       reduceRight: new AnyType(),
+
       reverse: this,
       shift: this.elementType,
       slice: this,
       some: new BooleanType(),
       sort: this,
-      splice: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      splice: this.extend([inputArgTypes[2] ?? new AnyType()]),
       toLocaleString: new StringType(),
       toString: new StringType(),
-      unshift: new ArrayType(new AnyType()), // XXX: no support for input argument types yet
+      unshift: new NumberType(), // side effects
       valueOf: this,
       values: new AnyType(), // XXX: no support for iterable types yet
     };
+  }
+  override getMethodReturnType(
+    methodName: string,
+    inputArgTypes: Type[],
+  ): Type | null {
+    let result = super.getMethodReturnType(methodName, inputArgTypes);
+    if (["push", "unshift"].includes(methodName) && inputArgTypes) {
+      // These functions modify the array type as a side effect
+      this.elementType = this.extend(inputArgTypes);
+    }
+    return result;
   }
 }
 
@@ -420,11 +446,14 @@ export class UnionType extends Type {
   public alwaysTrue(): boolean {
     return this.types.every((type) => type.alwaysTrue());
   }
-  // TODO: getMethodReturnTypeMap
-  override getMethodReturnType(methodName: string): Type | null {
+
+  override getMethodReturnType(
+    methodName: string,
+    inputArgTypes: Type[],
+  ): Type | null {
     let returnTypes = [];
     for (let subType of this.types) {
-      let returnType = subType.getMethodReturnType(methodName);
+      let returnType = subType.getMethodReturnType(methodName, inputArgTypes);
       if (returnType == null) {
         // One or more items in the union don't implement the requested method
         return null;
