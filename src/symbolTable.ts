@@ -294,9 +294,13 @@ export class ArrayType extends Type {
   }
 
   override getMethodReturnTypeMap(inputArgTypes: Type[]): TypeMap {
+    let inputArrayType = new AnyType();
+    if (inputArgTypes[0] instanceof ArrayType) {
+      inputArrayType = inputArgTypes[0].elementType;
+    }
     return {
       at: this.elementType,
-      concat: this.extend([inputArgTypes[0] ?? new AnyType()]),
+      concat: this.extend([inputArrayType]),
       entries: new AnyType(), // XXX: no support for iterable types yet
       every: new BooleanType(),
       fill: this.extend([inputArgTypes[0] ?? new AnyType()]),
@@ -345,7 +349,10 @@ export class ArrayType extends Type {
     let result = super.getMethodReturnType(methodName, inputArgTypes);
     if (["push", "unshift"].includes(methodName) && inputArgTypes) {
       // These functions modify the array type as a side effect
-      this.elementType = this.extend(inputArgTypes);
+      console.debug(
+        `ArrayType.getMethodReturnType: extending array type with ${inputArgTypes}`,
+      );
+      this.elementType = this.extend(inputArgTypes).elementType;
     }
     return result;
   }
