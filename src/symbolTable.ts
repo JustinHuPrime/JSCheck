@@ -514,4 +514,10 @@ export class AnyType extends Type {
   public alwaysTrue(): boolean {
     return false;
   }
+  override getMethodReturnType(
+    _methodName: string,
+    _inputArgTypes: Type[],
+  ): Type | null {
+    return this;
+  }
 }

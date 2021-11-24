@@ -265,7 +265,12 @@ export default class TypeVisitor {
   public getVariableType(variableName: string, node: t.Node): Type {
     let mapping = this.symbolTable.getMap();
     let type = mapping.get(variableName);
-    if (type == null) {
+    if (type != null) {
+      return type;
+    } else if (global.hasOwnProperty(variableName)) {
+      // This is a JS global (e.g. "console")
+      return new AnyType();
+    } else {
       report.addError(
         `Reference to unknown variable ${variableName}`,
         this.filename,
@@ -274,7 +279,6 @@ export default class TypeVisitor {
       );
       return new ErrorType(); // proceed on errors
     }
-    return type;
   }
 
   public setVariableType(variableName: string, newType: Type) {

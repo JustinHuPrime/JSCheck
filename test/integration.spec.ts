@@ -44,6 +44,21 @@ describe("Integration Tests", () => {
     );
   });
 
+  it("Simple assignment with console.log", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/simple-assignment-with-logging.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Error report should be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", new NumberType()],
+        ["y", new StringType()],
+      ]),
+    );
+  });
+
   it("Variable declaration: unknown variable", () => {
     let symbolTable = typecheckFiles([
       "./test/test-examples/declaration-error-unknown-var.js",
