@@ -309,18 +309,13 @@ export default class TypeVisitor {
           let lhsIsVariable = t.isIdentifier(node.left.object);
 
           if (lhsIsVariable) {
+            // if the LHS is a variable, update its type
             if (
               lhsType instanceof ArrayType &&
               indexType instanceof NumberType
             ) {
-              // if the LHS is a variable, update its type
-              let newListType = new ArrayType(
-                UnionType.asNeeded([lhsType.elementType, rhsType]),
-              );
-              this.setVariableType(
-                (node.left.object as t.Identifier).name,
-                newListType,
-              );
+              // Extend the array type in-place to support circular types
+              lhsType.extend([rhsType], true);
             } else if (lhsType instanceof ObjectType && propertyName) {
               lhsType.fields[propertyName] = rhsType;
             } else {

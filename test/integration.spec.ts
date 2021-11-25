@@ -301,6 +301,24 @@ describe("Integration Tests", () => {
     assert.deepEqual(symbolTable.get("lst2"), lst2Type);
   });
 
+  it("Lists: recursive nested list + type mutation", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-type-mutation-recursive.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    console.log(symbolTable);
+    assert.equal(report.getErrors().length, 0, "Expected 0 errors generated");
+
+    let lst1Type = new ArrayType(new StringType());
+    lst1Type.extend([lst1Type], true); // circular references BAYBEE
+    let lst2Type = new ArrayType(lst1Type);
+    assert.equal(symbolTable.size, 2);
+
+    assert.deepEqual(symbolTable.get("lst1"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
+  });
+
   it("Lists: instance methods with type side-effects", () => {
     let symbolTable = typecheckFiles([
       "./test/test-examples/lists-methods-side-effects.js",

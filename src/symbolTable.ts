@@ -307,8 +307,12 @@ export class ArrayType extends Type {
   }
 
   // Return an array type including the current + new types
-  public extend(newTypes: Type[]): ArrayType {
-    return new ArrayType(UnionType.asNeeded([this.elementType, ...newTypes]));
+  public extend(newTypes: Type[], inPlace?: boolean): ArrayType {
+    let newElemType = UnionType.asNeeded([this.elementType, ...newTypes]);
+    if (inPlace) {
+      this.elementType = newElemType;
+    }
+    return new ArrayType(newElemType);
   }
 
   override getMethodReturnTypeMap(inputArgTypes: Type[]): TypeMap {
