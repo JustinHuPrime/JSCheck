@@ -22,7 +22,7 @@ export default class SymbolTable {
 
 // types
 export abstract class Type {
-  type = this.toString(); // used to determine deep equality
+  type = this.constructor.name; // used to determine deep equality
   public abstract toString(): string;
 
   public abstract isIterable(): boolean;
@@ -56,7 +56,7 @@ export abstract class Type {
 // base types
 export class NumberType extends Type {
   public toString() {
-    return "number";
+    return "NumberType";
   }
 
   public isIterable(): boolean {
@@ -87,7 +87,7 @@ export class NumberType extends Type {
 
 export class StringType extends Type {
   public toString() {
-    return "string";
+    return "StringType";
   }
 
   public isIterable(): boolean {
@@ -150,7 +150,7 @@ export class StringType extends Type {
 
 export class BooleanType extends Type {
   public toString() {
-    return "boolean";
+    return "BooleanType";
   }
 
   public isIterable(): boolean {
@@ -177,7 +177,7 @@ export class BooleanType extends Type {
 
 export class UndefinedType extends Type {
   public toString() {
-    return "undefined";
+    return "UndefinedType";
   }
 
   public isIterable(): boolean {
@@ -197,7 +197,7 @@ export class UndefinedType extends Type {
 
 export class NullType extends Type {
   public toString() {
-    return "null";
+    return "NullType";
   }
 
   public isIterable(): boolean {
@@ -219,7 +219,7 @@ export class NullType extends Type {
 export class ObjectType extends Type {
   public fields: TypeMap;
   public toString() {
-    return `object with fields: ${this.fields}`;
+    return `ObjectType[${this.fields}]`;
   }
 
   constructor(fields: TypeMap) {
@@ -248,7 +248,7 @@ export class ObjectType extends Type {
   override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {
       // I'm ignoring the __ methods for now
-      // FIXME: add support for object methods
+      // FIXME: add support for object methods (custom types)
       hasOwnProperty: new BooleanType(),
       isPrototypeOf: new BooleanType(),
       propertyIsEnumerable: new BooleanType(),
@@ -262,7 +262,7 @@ export class ObjectType extends Type {
 export class ArrayType extends Type {
   public elementType: Type;
   public toString() {
-    return `array of ${this.elementType}`;
+    return `ArrayType[${this.elementType}]`;
   }
 
   constructor(elementType: Type) {
@@ -362,7 +362,7 @@ export class FunctionType extends Type {
   public params: Type[];
   public returnType: Type;
   public toString() {
-    return `function with parameter types ${this.params} and return type ${this.returnType}`;
+    return `FunctionType[${this.params} => ${this.returnType}]`;
   }
 
   constructor(params: Type[], returnType: Type) {
@@ -391,7 +391,7 @@ export class FunctionType extends Type {
 export class UnionType extends Type {
   public types: Type[];
   public toString() {
-    return `one of the following types ${this.types}`;
+    return `UnionType[${this.types.join("|")}]`;
   }
 
   // Union constructor that normalizes nested unions, removes duplicates, and strips unions of 1 type
@@ -474,7 +474,7 @@ export class UnionType extends Type {
 
 export class ErrorType extends Type {
   public toString() {
-    return "error-type";
+    return "ErrorType";
   }
 
   public isIterable(): boolean {
@@ -494,7 +494,7 @@ export class ErrorType extends Type {
 
 export class AnyType extends Type {
   public toString() {
-    return "any type";
+    return "AnyType";
   }
 
   public isIterable(): boolean {
