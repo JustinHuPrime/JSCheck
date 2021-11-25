@@ -3,7 +3,9 @@ import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
 import SymbolTable, {
   ArrayType,
+  BooleanType,
   ErrorType,
+  NullType,
   NumberType,
   ObjectType,
   StringType,
@@ -78,7 +80,7 @@ describe("Integration Tests", () => {
 
   it("Lists: declaration, reading/assigning items", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/lists.js",
+      "./test/test-examples/lists-index-read-assignment.js",
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
@@ -150,5 +152,72 @@ describe("Integration Tests", () => {
       symbolTable,
       new Map([["a", new ArrayType(new ErrorType())]]),
     );
+  });
+
+  it("Instance methods on built-in types (good and bad cases)", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/instance-methods-builtin-types.js",
+    ]).getMap();
+
+    console.log(report.getErrors());
+    assert.equal(report.getErrors().length, 3, "Expected 3 errors generated");
+
+    let unionType = UnionType.asNeeded([new StringType(), new NumberType()]);
+    assert.equal(symbolTable.size, 10);
+
+    assert.deepEqual(symbolTable.get("lst"), new ArrayType(unionType));
+    assert.deepEqual(symbolTable.get("num"), new NumberType());
+    assert.deepEqual(symbolTable.get("str"), new StringType());
+    assert.deepEqual(symbolTable.get("either"), unionType);
+
+    assert.deepEqual(symbolTable.get("good_1"), new StringType());
+    assert.deepEqual(symbolTable.get("good_2"), new ArrayType(unionType));
+    assert.deepEqual(symbolTable.get("good_3"), new StringType());
+
+    assert.deepEqual(symbolTable.get("bad_1"), new ErrorType());
+    assert.deepEqual(symbolTable.get("bad_2"), new ErrorType());
+    assert.deepEqual(symbolTable.get("bad_3"), new ErrorType());
+  });
+
+  it("Lists: instance methods", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-instance-methods.js",
+    ]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected no errors in report");
+
+    assert.equal(symbolTable.size, 6);
+
+    assert.deepEqual(
+      symbolTable.get("someNums"),
+      new ArrayType(new NumberType()),
+    );
+    assert.deepEqual(
+      symbolTable.get("someBools"),
+      new ArrayType(new BooleanType()),
+    );
+
+    assert.deepEqual(symbolTable.get("arr1"), new ArrayType(new NumberType()));
+    assert.deepEqual(
+      symbolTable.get("arr2"),
+      new ArrayType(UnionType.asNeeded([new BooleanType(), new NumberType()])),
+    );
+    assert.deepEqual(symbolTable.get("b"), new BooleanType());
+    assert.deepEqual(symbolTable.get("n"), new NumberType());
+  });
+
+  it("Lists: instance methods with type side-effects", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-methods-side-effects.js",
+    ]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected no errors in report");
+
+    assert.equal(symbolTable.size, 3);
+
+    let unionType = UnionType.asNeeded([new NumberType(), new NullType()]);
+    assert.deepEqual(symbolTable.get("items"), new ArrayType(unionType));
+    assert.deepEqual(symbolTable.get("newlen"), new NumberType());
+    assert.deepEqual(symbolTable.get("first"), unionType);
   });
 });

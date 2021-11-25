@@ -1,3 +1,5 @@
+export type TypeMap = { [key: string]: Type };
+
 export default class SymbolTable {
   private mapping: Map<string, Type>;
   private parentScope: SymbolTable | null;
@@ -24,12 +26,31 @@ export abstract class Type {
   public abstract toString(): string;
 
   public abstract isIterable(): boolean;
+
   public getSpreadType(): Type {
     throw new Error(`${this} isn't iterable`);
   }
+
   public abstract toPrimitive(): Type;
+
   public abstract alwaysFalse(): boolean;
+
   public abstract alwaysTrue(): boolean;
+
+  protected getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
+    return {};
+  }
+
+  // Returns the type of calling the given object / property method,
+  // or null if the method name does not exist
+  // This does not the check types of input values yet
+  public getMethodReturnType(
+    methodName: string,
+    inputArgTypes: Type[],
+  ): Type | null {
+    let methodMap = this.getMethodReturnTypeMap(inputArgTypes);
+    return methodMap[methodName] || null;
+  }
 }
 
 // base types
@@ -50,6 +71,17 @@ export class NumberType extends Type {
   }
   public alwaysTrue(): boolean {
     return false;
+  }
+
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
+    return {
+      toExponential: new StringType(),
+      toFixed: new StringType(),
+      toLocaleString: new StringType(),
+      toPrecision: new StringType(),
+      toString: new StringType(),
+      valueOf: this,
+    };
   }
 }
 
@@ -75,6 +107,45 @@ export class StringType extends Type {
   public alwaysTrue(): boolean {
     return false;
   }
+
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
+    return {
+      at: new StringType(),
+      charAt: new StringType(),
+      charCodeAt: new NumberType(),
+      codePointAt: new NumberType(),
+      concat: new StringType(),
+      includes: new BooleanType(),
+      endsWith: new BooleanType(),
+      indexOf: new NumberType(),
+      lastIndexOf: new NumberType(),
+      localeCompare: new NumberType(),
+      match: UnionType.asNeeded([
+        new ArrayType(new StringType()),
+        new NullType(),
+      ]),
+      matchAll: new AnyType(), // XXX: iterable types not supported
+      normalize: new StringType(),
+      padEnd: new StringType(),
+      padStart: new StringType(),
+      replace: new StringType(),
+      replaceAll: new StringType(),
+      search: UnionType.asNeeded([new StringType(), new NumberType()]),
+      slice: new StringType(),
+      split: new StringType(),
+      startsWith: new StringType(),
+      substring: new StringType(),
+      toLocaleLowerCase: new StringType(),
+      toLocaleUpperCase: new StringType(),
+      toLowerCase: new StringType(),
+      toUpperCase: new StringType(),
+      toString: new StringType(),
+      trim: new StringType(),
+      trimStart: new StringType(),
+      trimEnd: new StringType(),
+      valueOf: this,
+    };
+  }
 }
 
 export class BooleanType extends Type {
@@ -94,6 +165,13 @@ export class BooleanType extends Type {
   }
   public alwaysTrue(): boolean {
     return false;
+  }
+
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
+    return {
+      toString: new StringType(),
+      valueOf: this,
+    };
   }
 }
 
@@ -139,12 +217,12 @@ export class NullType extends Type {
 
 // compound types
 export class ObjectType extends Type {
-  public fields: { [key: string]: Type };
+  public fields: TypeMap;
   public toString() {
     return `object with fields: ${this.fields}`;
   }
 
-  constructor(fields: { [key: string]: Type }) {
+  constructor(fields: TypeMap) {
     super();
     this.fields = fields;
   }
@@ -165,6 +243,19 @@ export class ObjectType extends Type {
   }
   public alwaysTrue(): boolean {
     return true;
+  }
+
+  override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
+    return {
+      // I'm ignoring the __ methods for now
+      // FIXME: add support for object methods
+      hasOwnProperty: new BooleanType(),
+      isPrototypeOf: new BooleanType(),
+      propertyIsEnumerable: new BooleanType(),
+      toLocaleString: new StringType(),
+      toString: new StringType(),
+      valueOf: this,
+    };
   }
 }
 
@@ -196,6 +287,75 @@ export class ArrayType extends Type {
   public alwaysTrue(): boolean {
     return true;
   }
+
+  // Return an array type including the current + new types
+  public extend(newTypes: Type[]): ArrayType {
+    return new ArrayType(UnionType.asNeeded([this.elementType, ...newTypes]));
+  }
+
+  override getMethodReturnTypeMap(inputArgTypes: Type[]): TypeMap {
+    let inputArrayType = new AnyType();
+    if (inputArgTypes[0] instanceof ArrayType) {
+      inputArrayType = inputArgTypes[0].elementType;
+    }
+    return {
+      at: this.elementType,
+      concat: this.extend([inputArrayType]),
+      entries: new AnyType(), // XXX: no support for iterable types yet
+      every: new BooleanType(),
+      fill: this.extend([inputArgTypes[0] ?? new AnyType()]),
+      filter: this,
+      find: UnionType.asNeeded([new UndefinedType(), this.elementType]),
+      findIndex: new NumberType(),
+
+      // XXX: skipping flat and flatMap as their types are quite complicated
+      flat: new ArrayType(new AnyType()),
+      flatMap: new ArrayType(new AnyType()),
+
+      forEach: new UndefinedType(),
+      includes: new BooleanType(),
+      indexOf: new NumberType(),
+      join: new StringType(),
+      keys: new AnyType(), // XXX: no support for iterable types yet
+      lastIndexOf: new NumberType(),
+
+      // XXX: this is a stub because we don't support type checking functions yet
+      map: new ArrayType(new AnyType()),
+
+      pop: this.elementType,
+      push: new NumberType(), // side effects
+
+      // XXX: this is a stub because we don't support type checking functions yet
+      reduce: new AnyType(),
+      reduceRight: new AnyType(),
+
+      reverse: this,
+      shift: this.elementType,
+      slice: this,
+      some: new BooleanType(),
+      sort: this,
+      splice: this.extend([inputArgTypes[2] ?? new AnyType()]),
+      toLocaleString: new StringType(),
+      toString: new StringType(),
+      unshift: new NumberType(), // side effects
+      valueOf: this,
+      values: new AnyType(), // XXX: no support for iterable types yet
+    };
+  }
+  override getMethodReturnType(
+    methodName: string,
+    inputArgTypes: Type[],
+  ): Type | null {
+    let result = super.getMethodReturnType(methodName, inputArgTypes);
+    if (["push", "unshift"].includes(methodName) && inputArgTypes) {
+      // These functions modify the array type as a side effect
+      console.debug(
+        `ArrayType.getMethodReturnType: extending array type with ${inputArgTypes}`,
+      );
+      this.elementType = this.extend(inputArgTypes).elementType;
+    }
+    return result;
+  }
 }
 
 export class FunctionType extends Type {
@@ -224,6 +384,7 @@ export class FunctionType extends Type {
   public alwaysTrue(): boolean {
     return true;
   }
+  // TODO: define getMethodReturnTypeMap
 }
 
 // computed types
@@ -291,6 +452,23 @@ export class UnionType extends Type {
   }
   public alwaysTrue(): boolean {
     return this.types.every((type) => type.alwaysTrue());
+  }
+
+  override getMethodReturnType(
+    methodName: string,
+    inputArgTypes: Type[],
+  ): Type | null {
+    let returnTypes = [];
+    for (let subType of this.types) {
+      let returnType = subType.getMethodReturnType(methodName, inputArgTypes);
+      if (returnType == null) {
+        // One or more items in the union don't implement the requested method
+        return null;
+      } else {
+        returnTypes.push(subType);
+      }
+    }
+    return UnionType.asNeeded(returnTypes);
   }
 }
 

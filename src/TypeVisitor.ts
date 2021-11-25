@@ -93,6 +93,8 @@ export default class TypeVisitor {
         return this.visitUnaryExpression(node);
       case "ConditionalExpression":
         return this.visitConditionalExpression(node);
+      case "CallExpression":
+        return this.visitCallExpression(node);
       default:
         console.debug(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
@@ -482,5 +484,55 @@ export default class TypeVisitor {
     );
     console.debug(node);
     return new UndefinedType();
+  }
+
+  public visitCallExpression(node: t.CallExpression): Type {
+    let argumentTypes = [];
+    for (let argument of node.arguments) {
+      if (t.isExpression(argument)) {
+        argumentTypes.push(this.visitExpression(argument));
+      } else {
+        console.warn(
+          `visitCallExpression: unknown argument type ${argument.type}`,
+        );
+        argumentTypes.push(new AnyType());
+      }
+    }
+    if (
+      t.isMemberExpression(node.callee) &&
+      t.isExpression(node.callee.property)
+    ) {
+      let objectType = this.visitExpression(node.callee.object);
+      let propertyName = this.getObjectPropertyName(node.callee.property);
+      if (propertyName == null) {
+        // Can this actually happen??
+        report.addError(
+          `Bad property name ${propertyName} in instance method call`,
+          this.filename,
+          node.loc?.start.line,
+          node.loc?.start.column,
+        );
+        return new ErrorType();
+      }
+      let methodReturnType = objectType.getMethodReturnType(
+        propertyName,
+        argumentTypes,
+      );
+      if (methodReturnType == null) {
+        report.addError(
+          `Method ${propertyName} does not exist on type ${objectType}`,
+          this.filename,
+          node.loc?.start.line,
+          node.loc?.start.column,
+        );
+        return new ErrorType();
+      }
+      return methodReturnType;
+    } else {
+      console.warn(
+        `visitCallExpression: only instance methods for primitive types are supported so far`,
+      );
+      return new AnyType();
+    }
   }
 }
