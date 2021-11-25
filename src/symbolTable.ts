@@ -51,6 +51,11 @@ export abstract class Type {
     let methodMap = this.getMethodReturnTypeMap(inputArgTypes);
     return methodMap[methodName] || null;
   }
+  // Returns the type of calling the given instance property
+  // or null if the property does not exist
+  public getPropertyType(_propertyName: string): Type | null {
+    return null;
+  }
 }
 
 // base types
@@ -145,6 +150,13 @@ export class StringType extends Type {
       trimEnd: new StringType(),
       valueOf: this,
     };
+  }
+
+  override getPropertyType(propertyName: string): Type | null {
+    let typeMap: TypeMap = {
+      length: new NumberType(),
+    };
+    return typeMap[propertyName] ?? null;
   }
 }
 
@@ -257,6 +269,12 @@ export class ObjectType extends Type {
       valueOf: this,
     };
   }
+  override getPropertyType(propertyName: string): Type | null {
+    let builtinProperties: TypeMap = {
+      constructor: new AnyType(),
+    };
+    return this.fields[propertyName] ?? builtinProperties[propertyName] ?? null;
+  }
 }
 
 export class ArrayType extends Type {
@@ -355,6 +373,13 @@ export class ArrayType extends Type {
       this.elementType = this.extend(inputArgTypes).elementType;
     }
     return result;
+  }
+
+  override getPropertyType(propertyName: string): Type | null {
+    let typeMap: TypeMap = {
+      length: new NumberType(),
+    };
+    return typeMap[propertyName] ?? null;
   }
 }
 
@@ -465,9 +490,24 @@ export class UnionType extends Type {
         // One or more items in the union don't implement the requested method
         return null;
       } else {
-        returnTypes.push(subType);
+        returnTypes.push(returnType);
       }
     }
+    return UnionType.asNeeded(returnTypes);
+  }
+
+  override getPropertyType(propertyName: string): Type | null {
+    let returnTypes = [];
+    for (let subType of this.types) {
+      let returnType = subType.getPropertyType(propertyName);
+      if (returnType == null) {
+        // One or more items in the union don't implement the requested property
+        return null;
+      } else {
+        returnTypes.push(returnType);
+      }
+    }
+    console.log(`${this}.getPropertyType(${propertyName}) => ${returnTypes}`);
     return UnionType.asNeeded(returnTypes);
   }
 }

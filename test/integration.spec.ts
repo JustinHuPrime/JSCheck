@@ -9,6 +9,7 @@ import SymbolTable, {
   NumberType,
   ObjectType,
   StringType,
+  UndefinedType,
   UnionType,
 } from "../src/symbolTable";
 
@@ -174,7 +175,7 @@ describe("Integration Tests", () => {
       "./test/test-examples/instance-methods-builtin-types.js",
     ]).getMap();
 
-    console.log(report.getErrors());
+    // console.log(report.getErrors());
     assert.equal(report.getErrors().length, 3, "Expected 3 errors generated");
 
     let unionType = UnionType.asNeeded([new StringType(), new NumberType()]);
@@ -219,6 +220,85 @@ describe("Integration Tests", () => {
     );
     assert.deepEqual(symbolTable.get("b"), new BooleanType());
     assert.deepEqual(symbolTable.get("n"), new NumberType());
+  });
+
+  it("Lists: nested heterogenous lists + instance methods (good and bad cases)", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-methods.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    // console.log(symbolTable);
+    assert.equal(report.getErrors().length, 1, "Expected 1 error generated");
+
+    let lst1Type = new ArrayType(
+      UnionType.asNeeded([
+        new StringType(),
+        new ArrayType(UnionType.asNeeded([new StringType(), new NumberType()])),
+      ]),
+    );
+    let lst2Type = new ArrayType(
+      UnionType.asNeeded([lst1Type, new NumberType(), new StringType()]),
+    );
+    assert.equal(symbolTable.size, 4);
+
+    assert.deepEqual(symbolTable.get("lst1"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
+
+    assert.deepEqual(symbolTable.get("x"), lst1Type);
+    assert.deepEqual(symbolTable.get("y"), new ErrorType());
+  });
+
+  it("Lists: nested lists + instance properties (good and bad cases)", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-properties.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    // console.log(symbolTable);
+    assert.equal(report.getErrors().length, 0, "Expected 0 errors generated");
+
+    let unionType = UnionType.asNeeded([
+      new StringType(),
+      new ArrayType(new StringType()),
+    ]);
+    let lst1Type = new ArrayType(unionType);
+    let lst2Type = new ArrayType(
+      UnionType.asNeeded([lst1Type, new NumberType()]),
+    );
+    assert.equal(symbolTable.size, 7);
+
+    assert.deepEqual(symbolTable.get("lst"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
+
+    assert.deepEqual(symbolTable.get("w"), lst1Type.elementType);
+    assert.deepEqual(symbolTable.get("x"), new NumberType());
+    assert.deepEqual(symbolTable.get("y1"), new NumberType());
+    assert.deepEqual(symbolTable.get("y2"), new NumberType());
+    assert.deepEqual(symbolTable.get("z"), new UndefinedType());
+  });
+
+  it("Lists: nested lists + type mutation", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-type-mutation.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    console.log(symbolTable);
+    assert.equal(report.getErrors().length, 0, "Expected 0 errors generated");
+
+    let lst1Type = new ArrayType(
+      UnionType.asNeeded([
+        new StringType(),
+        new NumberType(),
+        new ArrayType(UnionType.asNeeded([new StringType(), new NumberType()])),
+      ]),
+    );
+    let lst2Type = new ArrayType(lst1Type);
+    assert.equal(symbolTable.size, 2);
+
+    assert.deepEqual(symbolTable.get("lst1"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
   });
 
   it("Lists: instance methods with type side-effects", () => {

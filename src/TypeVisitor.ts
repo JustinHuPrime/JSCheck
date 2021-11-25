@@ -478,9 +478,9 @@ export default class TypeVisitor {
       propertyType instanceof NumberType
     ) {
       return objectType; // String index. TODO: Add a test for this
-    } else if (objectType instanceof ObjectType && propertyName) {
-      let propertyValueType = objectType.fields[propertyName];
-      return propertyValueType || new UndefinedType();
+    } else if (propertyName) {
+      // General property references, including object properties and builtins of other types
+      return objectType.getPropertyType(propertyName) ?? new UndefinedType();
     }
 
     console.warn(
