@@ -37,7 +37,7 @@
     "deep-equal": "^2.0.5",
     "mocha": "^9.1.2",
     "nyc": "^15.1.0",
-    "prettier": "^2.4.1",
+    "prettier": "^2.5.0",
     "sinon": "^12.0.1",
     "ts-node": "^10.3.0",
     "typescript": "^4.5.2"
