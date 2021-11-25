@@ -141,6 +141,38 @@ describe("Integration Tests", () => {
     );
   });
 
+  it("Objects: property name coalescing", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-property-name-coalescing.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    let objType = new ObjectType({
+      "1": new StringType(),
+      two: new NumberType(),
+      "3": new StringType(),
+      four: new NumberType(),
+    });
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(symbolTable.get("obj"), objType);
+  });
+
+  it("Objects: circular/recursive structure", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-circular-reference.js",
+    ]).getMap();
+    console.log(report.getErrors());
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    let objType = new ObjectType({
+      "1": new NumberType(),
+      "3": new StringType(),
+    });
+    objType.fields["self"] = objType;
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(symbolTable.get("a"), objType);
+  });
+
   it("Lists: should spread iterables", () => {
     let symbolTable = typecheckFiles([
       "./test/test-examples/lists-supported-spread.js",
