@@ -265,7 +265,12 @@ export default class TypeVisitor {
   public getVariableType(variableName: string, node: t.Node): Type {
     let mapping = this.symbolTable.getMap();
     let type = mapping.get(variableName);
-    if (type == null) {
+    if (type != null) {
+      return type;
+    } else if (global.hasOwnProperty(variableName)) {
+      // This is a JS global (e.g. "console")
+      return new AnyType();
+    } else {
       report.addError(
         `Reference to unknown variable ${variableName}`,
         this.filename,
@@ -274,7 +279,6 @@ export default class TypeVisitor {
       );
       return new ErrorType(); // proceed on errors
     }
-    return type;
   }
 
   public setVariableType(variableName: string, newType: Type) {
@@ -290,6 +294,7 @@ export default class TypeVisitor {
         if (t.isIdentifier(node.left)) {
           // Setting a variable
           this.setVariableType(node.left.name, rhsType);
+          return rhsType;
         } else if (t.isMemberExpression(node.left)) {
           // Assignment to array or object member:
           // We ONLY handle numeric assignments to arrays, and static property assignments to objects
@@ -298,25 +303,22 @@ export default class TypeVisitor {
           let lhsType = this.visitExpression(node.left.object);
           let indexType = null; // Only used for arrays
           let propertyName; // Only used for objects
-          if (t.isExpression(node.left.property)) {
-            indexType = this.visitExpression(node.left.property);
-            propertyName = this.getObjectPropertyName(node.left.property);
+          if (!t.isExpression(node.left.property)) {
+            break;
           }
+          propertyName = this.getObjectPropertyName(node.left.property);
           let lhsIsVariable = t.isIdentifier(node.left.object);
 
           if (lhsIsVariable) {
-            if (
-              lhsType instanceof ArrayType &&
-              indexType instanceof NumberType
-            ) {
-              // if the LHS is a variable, update its type
-              let newListType = new ArrayType(
-                UnionType.asNeeded([lhsType.elementType, rhsType]),
-              );
-              this.setVariableType(
-                (node.left.object as t.Identifier).name,
-                newListType,
-              );
+            // if the LHS is a variable, update its type
+            if (lhsType instanceof ArrayType) {
+              indexType = this.visitExpression(node.left.property);
+              if (indexType instanceof NumberType) {
+                // Extend the array type in-place to support circular types
+                lhsType.extend([rhsType], true);
+              } else {
+                break;
+              }
             } else if (lhsType instanceof ObjectType && propertyName) {
               lhsType.fields[propertyName] = rhsType;
             } else {
@@ -327,14 +329,13 @@ export default class TypeVisitor {
           }
           // Otherwise, I don't think there's anything to do? JS will accept assigning to members of anything -
           // for numbers and strings it appears to just be a noop -JL
+          return rhsType;
         }
-        return rhsType;
-      default:
-        console.warn(
-          `visitAssignmentExpression: assignments of type ${node.operator} are not yet supported`,
-        );
-        return new AnyType();
     }
+    console.warn(
+      `visitAssignmentExpression: assignments of type ${node.operator} are not yet supported`,
+    );
+    return new AnyType();
   }
 
   private visitVariableDeclaration(node: t.VariableDeclaration) {
@@ -474,9 +475,9 @@ export default class TypeVisitor {
       propertyType instanceof NumberType
     ) {
       return objectType; // String index. TODO: Add a test for this
-    } else if (objectType instanceof ObjectType && propertyName) {
-      let propertyValueType = objectType.fields[propertyName];
-      return propertyValueType || new UndefinedType();
+    } else if (propertyName) {
+      // General property references, including object properties and builtins of other types
+      return objectType.getPropertyType(propertyName) ?? new UndefinedType();
     }
 
     console.warn(

@@ -9,6 +9,7 @@ import SymbolTable, {
   NumberType,
   ObjectType,
   StringType,
+  UndefinedType,
   UnionType,
 } from "../src/symbolTable";
 
@@ -40,6 +41,21 @@ describe("Integration Tests", () => {
         ["a", new NumberType()],
         ["b", new StringType()],
         ["c", new ArrayType(new NumberType())],
+      ]),
+    );
+  });
+
+  it("Simple assignment with console.log", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/simple-assignment-with-logging.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Error report should be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", new NumberType()],
+        ["y", new StringType()],
       ]),
     );
   });
@@ -125,6 +141,38 @@ describe("Integration Tests", () => {
     );
   });
 
+  it("Objects: property name coalescing", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-property-name-coalescing.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    let objType = new ObjectType({
+      "1": new StringType(),
+      two: new NumberType(),
+      "3": new StringType(),
+      four: new NumberType(),
+    });
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(symbolTable.get("obj"), objType);
+  });
+
+  it("Objects: circular/recursive structure", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-circular-reference.js",
+    ]).getMap();
+    console.log(report.getErrors());
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    let objType = new ObjectType({
+      "1": new NumberType(),
+      "3": new StringType(),
+    });
+    objType.fields["self"] = objType;
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(symbolTable.get("a"), objType);
+  });
+
   it("Lists: should spread iterables", () => {
     let symbolTable = typecheckFiles([
       "./test/test-examples/lists-supported-spread.js",
@@ -159,7 +207,7 @@ describe("Integration Tests", () => {
       "./test/test-examples/instance-methods-builtin-types.js",
     ]).getMap();
 
-    console.log(report.getErrors());
+    // console.log(report.getErrors());
     assert.equal(report.getErrors().length, 3, "Expected 3 errors generated");
 
     let unionType = UnionType.asNeeded([new StringType(), new NumberType()]);
@@ -204,6 +252,103 @@ describe("Integration Tests", () => {
     );
     assert.deepEqual(symbolTable.get("b"), new BooleanType());
     assert.deepEqual(symbolTable.get("n"), new NumberType());
+  });
+
+  it("Lists: nested heterogenous lists + instance methods (good and bad cases)", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-methods.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    // console.log(symbolTable);
+    assert.equal(report.getErrors().length, 1, "Expected 1 error generated");
+
+    let lst1Type = new ArrayType(
+      UnionType.asNeeded([
+        new StringType(),
+        new ArrayType(UnionType.asNeeded([new StringType(), new NumberType()])),
+      ]),
+    );
+    let lst2Type = new ArrayType(
+      UnionType.asNeeded([lst1Type, new NumberType(), new StringType()]),
+    );
+    assert.equal(symbolTable.size, 4);
+
+    assert.deepEqual(symbolTable.get("lst1"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
+
+    assert.deepEqual(symbolTable.get("x"), lst1Type);
+    assert.deepEqual(symbolTable.get("y"), new ErrorType());
+  });
+
+  it("Lists: nested lists + instance properties (good and bad cases)", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-properties.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    // console.log(symbolTable);
+    assert.equal(report.getErrors().length, 0, "Expected 0 errors generated");
+
+    let unionType = UnionType.asNeeded([
+      new StringType(),
+      new ArrayType(new StringType()),
+    ]);
+    let lst1Type = new ArrayType(unionType);
+    let lst2Type = new ArrayType(
+      UnionType.asNeeded([lst1Type, new NumberType()]),
+    );
+    assert.equal(symbolTable.size, 7);
+
+    assert.deepEqual(symbolTable.get("lst"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
+
+    assert.deepEqual(symbolTable.get("w"), lst1Type.elementType);
+    assert.deepEqual(symbolTable.get("x"), new NumberType());
+    assert.deepEqual(symbolTable.get("y1"), new NumberType());
+    assert.deepEqual(symbolTable.get("y2"), new NumberType());
+    assert.deepEqual(symbolTable.get("z"), new UndefinedType());
+  });
+
+  it("Lists: nested lists + type mutation", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-type-mutation.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    console.log(symbolTable);
+    assert.equal(report.getErrors().length, 0, "Expected 0 errors generated");
+
+    let lst1Type = new ArrayType(
+      UnionType.asNeeded([
+        new StringType(),
+        new NumberType(),
+        new ArrayType(UnionType.asNeeded([new StringType(), new NumberType()])),
+      ]),
+    );
+    let lst2Type = new ArrayType(lst1Type);
+    assert.equal(symbolTable.size, 2);
+
+    assert.deepEqual(symbolTable.get("lst1"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
+  });
+
+  it("Lists: recursive nested list + type mutation", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-nested-type-mutation-recursive.js",
+    ]).getMap();
+
+    // console.log(report.getErrors());
+    console.log(symbolTable);
+    assert.equal(report.getErrors().length, 0, "Expected 0 errors generated");
+
+    let lst1Type = new ArrayType(new StringType());
+    lst1Type.extend([lst1Type], true); // circular references BAYBEE
+    let lst2Type = new ArrayType(lst1Type);
+    assert.equal(symbolTable.size, 2);
+
+    assert.deepEqual(symbolTable.get("lst1"), lst1Type);
+    assert.deepEqual(symbolTable.get("lst2"), lst2Type);
   });
 
   it("Lists: instance methods with type side-effects", () => {

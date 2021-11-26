@@ -22,7 +22,7 @@ export default class SymbolTable {
 
 // types
 export abstract class Type {
-  type = this.toString(); // used to determine deep equality
+  type = this.constructor.name; // used to determine deep equality
   public abstract toString(): string;
 
   public abstract isIterable(): boolean;
@@ -51,12 +51,17 @@ export abstract class Type {
     let methodMap = this.getMethodReturnTypeMap(inputArgTypes);
     return methodMap[methodName] || null;
   }
+  // Returns the type of calling the given instance property
+  // or null if the property does not exist
+  public getPropertyType(_propertyName: string): Type | null {
+    return null;
+  }
 }
 
 // base types
 export class NumberType extends Type {
   public toString() {
-    return "number";
+    return "NumberType";
   }
 
   public isIterable(): boolean {
@@ -87,7 +92,7 @@ export class NumberType extends Type {
 
 export class StringType extends Type {
   public toString() {
-    return "string";
+    return "StringType";
   }
 
   public isIterable(): boolean {
@@ -146,11 +151,18 @@ export class StringType extends Type {
       valueOf: this,
     };
   }
+
+  override getPropertyType(propertyName: string): Type | null {
+    let typeMap: TypeMap = {
+      length: new NumberType(),
+    };
+    return typeMap[propertyName] ?? null;
+  }
 }
 
 export class BooleanType extends Type {
   public toString() {
-    return "boolean";
+    return "BooleanType";
   }
 
   public isIterable(): boolean {
@@ -177,7 +189,7 @@ export class BooleanType extends Type {
 
 export class UndefinedType extends Type {
   public toString() {
-    return "undefined";
+    return "UndefinedType";
   }
 
   public isIterable(): boolean {
@@ -197,7 +209,7 @@ export class UndefinedType extends Type {
 
 export class NullType extends Type {
   public toString() {
-    return "null";
+    return "NullType";
   }
 
   public isIterable(): boolean {
@@ -219,7 +231,7 @@ export class NullType extends Type {
 export class ObjectType extends Type {
   public fields: TypeMap;
   public toString() {
-    return `object with fields: ${this.fields}`;
+    return `ObjectType[${this.fields}]`;
   }
 
   constructor(fields: TypeMap) {
@@ -248,7 +260,7 @@ export class ObjectType extends Type {
   override getMethodReturnTypeMap(_inputArgTypes: Type[]): TypeMap {
     return {
       // I'm ignoring the __ methods for now
-      // FIXME: add support for object methods
+      // FIXME: add support for object methods (custom types)
       hasOwnProperty: new BooleanType(),
       isPrototypeOf: new BooleanType(),
       propertyIsEnumerable: new BooleanType(),
@@ -257,12 +269,18 @@ export class ObjectType extends Type {
       valueOf: this,
     };
   }
+  override getPropertyType(propertyName: string): Type | null {
+    let builtinProperties: TypeMap = {
+      constructor: new AnyType(),
+    };
+    return this.fields[propertyName] ?? builtinProperties[propertyName] ?? null;
+  }
 }
 
 export class ArrayType extends Type {
   public elementType: Type;
   public toString() {
-    return `array of ${this.elementType}`;
+    return `ArrayType[${this.elementType}]`;
   }
 
   constructor(elementType: Type) {
@@ -289,8 +307,12 @@ export class ArrayType extends Type {
   }
 
   // Return an array type including the current + new types
-  public extend(newTypes: Type[]): ArrayType {
-    return new ArrayType(UnionType.asNeeded([this.elementType, ...newTypes]));
+  public extend(newTypes: Type[], inPlace?: boolean): ArrayType {
+    let newElemType = UnionType.asNeeded([this.elementType, ...newTypes]);
+    if (inPlace) {
+      this.elementType = newElemType;
+    }
+    return new ArrayType(newElemType);
   }
 
   override getMethodReturnTypeMap(inputArgTypes: Type[]): TypeMap {
@@ -356,13 +378,20 @@ export class ArrayType extends Type {
     }
     return result;
   }
+
+  override getPropertyType(propertyName: string): Type | null {
+    let typeMap: TypeMap = {
+      length: new NumberType(),
+    };
+    return typeMap[propertyName] ?? null;
+  }
 }
 
 export class FunctionType extends Type {
   public params: Type[];
   public returnType: Type;
   public toString() {
-    return `function with parameter types ${this.params} and return type ${this.returnType}`;
+    return `FunctionType[${this.params} => ${this.returnType}]`;
   }
 
   constructor(params: Type[], returnType: Type) {
@@ -391,7 +420,7 @@ export class FunctionType extends Type {
 export class UnionType extends Type {
   public types: Type[];
   public toString() {
-    return `one of the following types ${this.types}`;
+    return `UnionType[${this.types.join("|")}]`;
   }
 
   // Union constructor that normalizes nested unions, removes duplicates, and strips unions of 1 type
@@ -465,16 +494,31 @@ export class UnionType extends Type {
         // One or more items in the union don't implement the requested method
         return null;
       } else {
-        returnTypes.push(subType);
+        returnTypes.push(returnType);
       }
     }
+    return UnionType.asNeeded(returnTypes);
+  }
+
+  override getPropertyType(propertyName: string): Type | null {
+    let returnTypes = [];
+    for (let subType of this.types) {
+      let returnType = subType.getPropertyType(propertyName);
+      if (returnType == null) {
+        // One or more items in the union don't implement the requested property
+        return null;
+      } else {
+        returnTypes.push(returnType);
+      }
+    }
+    console.log(`${this}.getPropertyType(${propertyName}) => ${returnTypes}`);
     return UnionType.asNeeded(returnTypes);
   }
 }
 
 export class ErrorType extends Type {
   public toString() {
-    return "error-type";
+    return "ErrorType";
   }
 
   public isIterable(): boolean {
@@ -494,7 +538,7 @@ export class ErrorType extends Type {
 
 export class AnyType extends Type {
   public toString() {
-    return "any type";
+    return "AnyType";
   }
 
   public isIterable(): boolean {
@@ -513,5 +557,11 @@ export class AnyType extends Type {
   }
   public alwaysTrue(): boolean {
     return false;
+  }
+  override getMethodReturnType(
+    _methodName: string,
+    _inputArgTypes: Type[],
+  ): Type | null {
+    return this;
   }
 }
