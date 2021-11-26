@@ -568,15 +568,7 @@ export default class TypeVisitor {
   }
 
   private visitIfStatement(node: t.IfStatement) {
-    let testType = this.visitExpression(node.test);
-    if (!this.containsBoolean(testType)) {
-      report.addError(
-        `If condition does not produce a boolean, instead produces ${testType}`,
-        "",
-        node.test.loc?.start.line,
-        node.test.loc?.start.column,
-      );
-    }
+    this.visitExpression(node.test); // visit in case there is some side effect but with type coercion this can be anything
     let initialEnv = this.symbolTable;
     let trueEnv = new SymbolTable(initialEnv);
     this.symbolTable = trueEnv;
@@ -591,9 +583,5 @@ export default class TypeVisitor {
       trueEnv.mergeUpToDecl();
     }
     this.symbolTable = initialEnv;
-  }
-
-  private containsBoolean(testType: Type) {
-    return testType.type.indexOf(new BooleanType().type) != -1;
   }
 }
