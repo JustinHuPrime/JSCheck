@@ -76,3 +76,23 @@ Plans for final user study:
 We plan to conduct the final user study using the same format (with Google Forms) and with similar buddy code snippets, preferably this time with functionality that we would want to highlight that our project implements.
 
 In addition, this time, we would also want to only show error messages that we will be implementing (likely error messages with some sort of type information).
+
+# Milestone 5
+
+For our second user study, we had two participants who filled out a Google Doc with feedback on the default JS error messages and the error messages that
+our tool will be showing.
+
+Similar to our first user study, participants found that error messages with type information were more helpful than the standard JavaScript
+error messages. Our participants also said that our tool's error messages were well-tuned, and contained just the right amount of information in most cases. This might
+have been helped by us deciding not to include warnings in our error messages, which made the error messages too verbose according to participants in User Study 1.
+
+Participants also found that our error messages were worded better than JavaScript's original error messages. For example, when we had an error on `undefined`, the original JS error message was `attempted to call concat on undefined`. 
+
+Our error message was: `Attempted to call 'concat' on undefined`
+
+Our participants said that our error message made it more obvious what the problem was, despite the similar phrasing of
+both error messages.
+
+However, one participant stated that it would be an improvement if we could include variable names in our messages, that is,
+if an error occured on the variable `a`, the error message should include that information instead of hte line number.
+We would like to implement this, but have decided to hold off on this for now due to a lack of engineering cycles.
