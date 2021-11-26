@@ -53,6 +53,13 @@ export default class TypeVisitor {
       case "IfStatement":
         this.visitIfStatement(node);
         break;
+      case "ForOfStatement":
+      case "ForInStatement":
+        this.visitForInOfStatement(node);
+        break;
+      case "ForStatement":
+        this.visitForStatement(node);
+        break;
       default:
         console.debug(
           `visitStatement: node of type ${node.type} not supported, skipping.`,
@@ -583,5 +590,86 @@ export default class TypeVisitor {
       trueEnv.mergeUpToDecl();
     }
     this.symbolTable = initialEnv;
+  }
+
+  private visitForInOfStatement(node: t.ForInStatement | t.ForOfStatement) {
+    let initialEnv = this.symbolTable;
+    this.symbolTable = new SymbolTable(initialEnv);
+
+    if (t.isDeclareVariable(node.left)) {
+      this.visitVariableDeclaration(node.left);
+    } else if (t.isExpression(node.left)) {
+      this.visitExpression(node.left);
+    } else {
+      throw new Error("Reached impossible state according to documentation");
+    }
+    let iterType = this.visitExpression(node.right);
+    if (t.isForOfStatement(node) && !this.isArrayOrObject(iterType)) {
+      report.addError(
+        `For Of loops must iterate over arrays or objects, instead given ${iterType}`,
+        this.filename,
+        node.right.loc?.start.line,
+        node.right.loc?.start.column,
+      );
+    } else if (t.isForInStatement(node) && !this.isStringOrArray(iterType)) {
+      report.addError(
+        `For In loops must iterate over arrays or strings, instead given ${iterType}`,
+        this.filename,
+        node.right.loc?.start.line,
+        node.right.loc?.start.column,
+      );
+    }
+
+    this.visitStatement(node.body);
+
+    this.symbolTable.mergeUpOne();
+    this.symbolTable = initialEnv;
+  }
+
+  private visitForStatement(node: t.ForStatement) {
+    let initialEnv = this.symbolTable;
+    this.symbolTable = new SymbolTable(initialEnv);
+
+    if (t.isDeclareVariable(node.init)) {
+      this.visitVariableDeclaration(node.init);
+    } else if (t.isExpression(node.init)) {
+      this.visitExpression(node.init);
+    }
+    if (t.isExpression(node.test)) {
+      this.visitExpression(node.test);
+    }
+    if (t.isExpression(node.update)) {
+      this.visitExpression(node.update);
+    }
+    this.visitStatement(node.body);
+
+    this.symbolTable.mergeUpOne();
+    this.symbolTable = initialEnv;
+  }
+
+  private isArrayOrObject(iterType: Type): boolean {
+    if (iterType instanceof UnionType) {
+      return (
+        iterType.types.filter((type) => this.isArrayOrObject(type)).length != 0
+      );
+    }
+    return (
+      iterType instanceof ArrayType ||
+      iterType instanceof ObjectType ||
+      iterType instanceof AnyType
+    );
+  }
+
+  private isStringOrArray(iterType: Type): boolean {
+    if (iterType instanceof UnionType) {
+      return (
+        iterType.types.filter((type) => this.isStringOrArray(type)).length != 0
+      );
+    }
+    return (
+      iterType instanceof ArrayType ||
+      iterType instanceof StringType ||
+      iterType instanceof AnyType
+    );
   }
 }
