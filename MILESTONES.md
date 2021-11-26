@@ -96,3 +96,12 @@ both error messages.
 However, one participant stated that it would be an improvement if we could include variable names in our messages, that is,
 if an error occured on the variable `a`, the error message should include that information instead of hte line number.
 We would like to implement this, but have decided to hold off on this for now due to a lack of engineering cycles.
+
+For the remaining days, we plan to make our video. In this video, we plan to show common JavaScript errors 
+and demonstrate how our type checker can help mitigate them.
+
+As of now, we have three major tasks remaining:
+
+- Type checking `for` expressions
+- Compound assignment checking
+- Type specialization (time permitting)
