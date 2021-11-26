@@ -48,7 +48,7 @@ export default class TypeVisitor {
         this.visitExpression(node.expression);
         break;
       case "BlockStatement":
-        node.body.forEach((stmt) => this.visitStatement(stmt));
+        this.visitBlockStatement(node);
         break;
       default:
         console.debug(
@@ -263,27 +263,38 @@ export default class TypeVisitor {
   }
 
   public getVariableType(variableName: string, node: t.Node): Type {
-    let mapping = this.symbolTable.getMap();
-    let type = mapping.get(variableName);
-    if (type != null) {
-      return type;
-    } else if (global.hasOwnProperty(variableName)) {
-      // This is a JS global (e.g. "console")
-      return new AnyType();
-    } else {
+    try {
+      if (global.hasOwnProperty(variableName)) {
+        // This is a JS global (e.g. "console")
+        return new AnyType();
+      }
+      return this.symbolTable.getVariableType(variableName);
+    } catch (e) {
       report.addError(
         `Reference to unknown variable ${variableName}`,
         this.filename,
         node.loc?.start.line,
         node.loc?.start.column,
       );
-      return new ErrorType(); // proceed on errors
+      return new ErrorType();
     }
   }
 
-  public setVariableType(variableName: string, newType: Type) {
-    let mapping = this.symbolTable.getMap();
-    return mapping.set(variableName, newType);
+  public setVariableType(variableName: string, newType: Type, node: t.Node) {
+    try {
+      this.symbolTable.setVariableType(variableName, newType);
+    } catch (e) {
+      report.addError(
+        `Variable assignment to an undeclared variable named ${variableName}`,
+        this.filename,
+        node.loc?.start.line,
+        node.loc?.start.column,
+      );
+    }
+  }
+
+  private declareVariableType(variableName: string, newType: Type) {
+    this.symbolTable.declareVariableType(variableName, newType);
   }
 
   // Assignments to existing vars, e.g. `x = 5;`
@@ -293,7 +304,7 @@ export default class TypeVisitor {
         let rhsType = this.visitExpression(node.right);
         if (t.isIdentifier(node.left)) {
           // Setting a variable
-          this.setVariableType(node.left.name, rhsType);
+          this.setVariableType(node.left.name, rhsType, node);
           return rhsType;
         } else if (t.isMemberExpression(node.left)) {
           // Assignment to array or object member:
@@ -339,6 +350,12 @@ export default class TypeVisitor {
   }
 
   private visitVariableDeclaration(node: t.VariableDeclaration) {
+    if (node.kind === "var") {
+      // TODO: care about global vars (only in blocks, not in functions, but when undeclared too)
+      console.warn(
+        "we might not treat the scope for var correctly within blocks",
+      );
+    }
     for (let declaration of node.declarations) {
       this.visitVariableDeclarator(declaration);
     }
@@ -356,7 +373,7 @@ export default class TypeVisitor {
     } else {
       foundType = this.visitExpression(node.init);
     }
-    this.setVariableType(node.id.name, foundType);
+    this.declareVariableType(node.id.name, foundType);
   }
 
   private visitArrayExpression(node: t.ArrayExpression): Type {
@@ -535,5 +552,15 @@ export default class TypeVisitor {
       );
       return new AnyType();
     }
+  }
+
+  private visitBlockStatement(node: t.BlockStatement) {
+    this.symbolTable = new SymbolTable(this.symbolTable);
+    node.body.forEach((stmt) => this.visitStatement(stmt));
+    if (this.symbolTable.getParentScope() == null) {
+      throw new Error("Mismatched scope");
+    }
+    this.symbolTable.overwriteUpOne();
+    this.symbolTable = this.symbolTable.getParentScope() as SymbolTable;
   }
 }

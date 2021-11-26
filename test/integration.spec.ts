@@ -365,4 +365,18 @@ describe("Integration Tests", () => {
     assert.deepEqual(symbolTable.get("newlen"), new NumberType());
     assert.deepEqual(symbolTable.get("first"), unionType);
   });
+
+  it("Block Scope: simple block scope", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/block-scope.js",
+    ]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected no errors in report");
+
+    assert.equal(symbolTable.size, 3);
+
+    assert.deepEqual(symbolTable.get("a"), new NumberType());
+    assert.deepEqual(symbolTable.get("b"), new StringType());
+    assert.deepEqual(symbolTable.get("c"), new StringType());
+  });
 });
