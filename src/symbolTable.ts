@@ -1,22 +1,68 @@
 export type TypeMap = { [key: string]: Type };
 
 export default class SymbolTable {
-  private mapping: Map<string, Type>;
+  private localMapping: Map<string, Type>; // declared within this scope
+  private parentModifiedMapping: Map<string, Type>; // declared in a parent scope but modified
   private parentScope: SymbolTable | null;
 
   constructor(parentScope: SymbolTable | null = null) {
-    this.mapping = new Map();
+    this.localMapping = new Map();
+    this.parentModifiedMapping = new Map();
     this.parentScope = parentScope;
   }
 
+  // just for testing
   getMap() {
-    // XXX: just for testing so far - we may want a neater API later
-    return this.mapping;
+    return this.localMapping;
   }
 
   getParentScope() {
-    // XXX: just for testing so far - we may want a neater API later
     return this.parentScope;
+  }
+
+  public getVariableType(variableName: string): Type {
+    if (this.localMapping.has(variableName)) {
+      return this.localMapping.get(variableName) as Type;
+    } else if (this.parentModifiedMapping.has(variableName)) {
+      return this.parentModifiedMapping.get(variableName) as Type;
+    } else if (this.parentScope != null) {
+      return this.parentScope.getVariableType(variableName);
+    }
+    throw new Error("Variable not declared.");
+  }
+
+  public setVariableType(variableName: string, newType: Type) {
+    if (this.localMapping.has(variableName)) {
+      this.localMapping.set(variableName, newType);
+    } else if (this.isDeclared(variableName)) {
+      this.parentModifiedMapping.set(variableName, newType);
+    } else {
+      throw new Error("Variable not declared.");
+    }
+  }
+
+  private isDeclared(variableName: string): boolean {
+    if (this.localMapping.has(variableName)) {
+      return true;
+    } else {
+      if (this.parentScope == null) {
+        return false;
+      }
+      return this.parentScope.isDeclared(variableName);
+    }
+  }
+
+  public declareVariableType(variableName: string, newType: Type) {
+    this.localMapping.set(variableName, newType);
+  }
+
+  // Everything in the modified mapping overwrite the local mapping/modified mapping of parent
+  public overwriteUpOne() {
+    if (this.parentScope != null) {
+      this.parentModifiedMapping.forEach((value, key) => {
+        this.parentScope?.setVariableType(key, value);
+      });
+    }
   }
 }
 

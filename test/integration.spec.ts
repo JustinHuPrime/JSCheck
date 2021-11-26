@@ -373,9 +373,10 @@ describe("Integration Tests", () => {
 
     assert.equal(report.isEmpty(), true, "Expected no errors in report");
 
-    assert.equal(symbolTable.size, 2);
+    assert.equal(symbolTable.size, 3);
 
     assert.deepEqual(symbolTable.get("a"), new NumberType());
     assert.deepEqual(symbolTable.get("b"), new StringType());
+    assert.deepEqual(symbolTable.get("c"), new StringType());
   });
 });

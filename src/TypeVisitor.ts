@@ -61,11 +61,11 @@ export default class TypeVisitor {
   private visitBlockStatement(node: t.BlockStatement) {
     this.symbolTable = new SymbolTable(this.symbolTable);
     node.body.forEach((stmt) => this.visitStatement(stmt));
-    let curr = this.symbolTable.getParentScope();
-    if (curr == null) {
+    if (this.symbolTable.getParentScope() == null) {
       throw new Error("Mismatched scope");
     }
-    this.symbolTable = curr;
+    this.symbolTable.overwriteUpOne();
+    this.symbolTable = this.symbolTable.getParentScope() as SymbolTable;
   }
 
   visitExpression(node: t.Expression): Type {
@@ -273,81 +273,38 @@ export default class TypeVisitor {
   }
 
   public getVariableType(variableName: string, node: t.Node): Type {
-    return this.recGetVarType(variableName, node, this.symbolTable);
-  }
-
-  private recGetVarType(
-    variableName: string,
-    node: t.Node,
-    currScope: SymbolTable,
-  ): Type {
-    let mapping = currScope.getMap();
-    let type = mapping.get(variableName);
-    if (type != null) {
-      return type;
-    } else if (global.hasOwnProperty(variableName)) {
-      // This is a JS global (e.g. "console")
-      return new AnyType();
-    } else {
-      let parent = currScope.getParentScope();
-      if (parent === null) {
-        report.addError(
-          `Reference to unknown variable ${variableName}`,
-          this.filename,
-          node.loc?.start.line,
-          node.loc?.start.column,
-        );
-        return new ErrorType(); // proceed on errors
-      } else {
-        return this.recGetVarType(variableName, node, parent);
+    try {
+      if (global.hasOwnProperty(variableName)) {
+        // This is a JS global (e.g. "console")
+        return new AnyType();
       }
+      return this.symbolTable.getVariableType(variableName);
+    } catch (e) {
+      report.addError(
+        `Reference to unknown variable ${variableName}`,
+        this.filename,
+        node.loc?.start.line,
+        node.loc?.start.column,
+      );
+      return new ErrorType();
     }
   }
 
   public setVariableType(variableName: string, newType: Type, node: t.Node) {
-    this.recSetVarType(variableName, newType, node, this.symbolTable);
-  }
-
-  private recSetVarType(
-    variableName: string,
-    newType: Type,
-    node: t.Node,
-    currScope: SymbolTable,
-  ) {
-    let mapping = currScope.getMap();
-    if (mapping.has(variableName)) {
-      mapping.set(variableName, newType);
-    } else {
-      let parent = currScope.getParentScope();
-      if (parent === null) {
-        report.addError(
-          `Variable assignment to an undeclared variable named ${variableName}`,
-          this.filename,
-          node.loc?.start.line,
-          node.loc?.start.column,
-        );
-      } else {
-        this.recSetVarType(variableName, newType, node, parent);
-      }
-    }
-  }
-
-  private declareVariableType(
-    variableName: string,
-    newType: Type,
-    node: t.Node,
-  ) {
-    let mapping = this.symbolTable.getMap();
-    if (mapping.has(variableName)) {
-      // This doesn't cause an error at global scope, just block/function scope, which javascript already errors.
+    try {
+      this.symbolTable.setVariableType(variableName, newType);
+    } catch (e) {
       report.addError(
-        `Redeclared variable in current scope named ${variableName}`,
+        `Variable assignment to an undeclared variable named ${variableName}`,
         this.filename,
         node.loc?.start.line,
         node.loc?.start.column,
       );
     }
-    mapping.set(variableName, newType);
+  }
+
+  private declareVariableType(variableName: string, newType: Type) {
+    this.symbolTable.declareVariableType(variableName, newType);
   }
 
   // Assignments to existing vars, e.g. `x = 5;`
@@ -404,6 +361,7 @@ export default class TypeVisitor {
 
   private visitVariableDeclaration(node: t.VariableDeclaration) {
     if (node.kind === "var") {
+      // TODO: care about global vars (only in blocks, not in functions, but when undeclared too)
       console.warn(
         "we might not treat the scope for var correctly within blocks",
       );
@@ -425,7 +383,7 @@ export default class TypeVisitor {
     } else {
       foundType = this.visitExpression(node.init);
     }
-    this.declareVariableType(node.id.name, foundType, node);
+    this.declareVariableType(node.id.name, foundType);
   }
 
   private visitArrayExpression(node: t.ArrayExpression): Type {

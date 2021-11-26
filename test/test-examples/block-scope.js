@@ -9,3 +9,10 @@ let b = true;
 {
   b = "string";
 }
+
+let c = 5;
+
+{
+  c = "string";
+  let c = true;
+}
