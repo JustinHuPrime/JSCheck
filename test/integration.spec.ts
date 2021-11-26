@@ -141,7 +141,7 @@ describe("Integration Tests", () => {
     );
   });
 
-  it("Objects: property name coalescing", () => {
+  it("Objects: property name type coalescing", () => {
     let symbolTable = typecheckFiles([
       "./test/test-examples/objects-property-name-coalescing.js",
     ]).getMap();
@@ -171,6 +171,66 @@ describe("Integration Tests", () => {
     objType.fields["self"] = objType;
     assert.equal(symbolTable.size, 1);
     assert.deepEqual(symbolTable.get("a"), objType);
+  });
+
+  it("Objects: spreading", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-spread.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    let aType = new ObjectType({
+      ID: new NumberType(),
+      title: new StringType(),
+    });
+    let bType = new ObjectType({
+      ID: new NumberType(),
+      title: new StringType(),
+      length: new NumberType(),
+    });
+    assert.deepEqual(symbolTable.get("a"), aType);
+    assert.deepEqual(symbolTable.get("b"), bType);
+  });
+
+  it("Objects: spreading with duplicate property name", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-spread-replace-duplicates.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    let aType = new ObjectType({
+      ID: new NumberType(),
+      title: new StringType(),
+    });
+    let bType = new ObjectType(
+      // length is in particular not `string` or `string|number`
+      {
+        ID: new NumberType(),
+        title: new StringType(),
+        length: new NumberType(),
+      },
+    );
+    assert.deepEqual(symbolTable.get("a"), aType);
+    assert.deepEqual(symbolTable.get("b"), bType);
+  });
+
+  it("Objects: invalid / unsupported spreading", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/objects-spread-invalid.js",
+    ]).getMap();
+    assert.equal(report.getErrors().length, 1);
+    assert.match(report.getErrors()[0]!.message, /Invalid spread/i);
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(
+      symbolTable.get("a"),
+      new ObjectType({
+        foo: new StringType(),
+      }),
+    );
+    assert.deepEqual(symbolTable.get("b"), new ErrorType());
   });
 
   it("Lists: should spread iterables", () => {
