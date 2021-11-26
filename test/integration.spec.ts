@@ -379,4 +379,71 @@ describe("Integration Tests", () => {
     assert.deepEqual(symbolTable.get("b"), new StringType());
     assert.deepEqual(symbolTable.get("c"), new StringType());
   });
+
+  it("If statement: assignment in branches", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-simple.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", UnionType.asNeeded([new BooleanType(), new StringType()])],
+      ]),
+    );
+  });
+
+  it("If statement: with no else", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-no-else.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable.get("x"),
+      UnionType.asNeeded([new NumberType(), new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("y"),
+      UnionType.asNeeded([
+        new BooleanType(),
+        new NumberType(),
+        new StringType(),
+      ]),
+    );
+  });
+
+  it("If statement: nested if statements", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-complicated.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable.get("x"),
+      UnionType.asNeeded([
+        new ArrayType(new NumberType()),
+        new BooleanType(),
+        new NumberType(),
+      ]),
+    );
+    assert.deepEqual(
+      symbolTable.get("y"),
+      UnionType.asNeeded([new NumberType(), new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("z"),
+      UnionType.asNeeded([new BooleanType(), new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("b"),
+      UnionType.asNeeded([
+        new BooleanType(),
+        new UndefinedType(),
+        new StringType(),
+        new NumberType(),
+      ]),
+    );
+  });
 });
