@@ -104,5 +104,4 @@ As of now, we have three major tasks remaining:
 
 - Type checking for expressions
 - Compound assignment checking
-- For loop checking
 - Type specialization (time permitting)
