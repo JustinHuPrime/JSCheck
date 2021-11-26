@@ -58,16 +58,6 @@ export default class TypeVisitor {
     }
   }
 
-  private visitBlockStatement(node: t.BlockStatement) {
-    this.symbolTable = new SymbolTable(this.symbolTable);
-    node.body.forEach((stmt) => this.visitStatement(stmt));
-    if (this.symbolTable.getParentScope() == null) {
-      throw new Error("Mismatched scope");
-    }
-    this.symbolTable.overwriteUpOne();
-    this.symbolTable = this.symbolTable.getParentScope() as SymbolTable;
-  }
-
   visitExpression(node: t.Expression): Type {
     console.log(`visit: seeing a ${node.type}`);
     switch (node.type) {
@@ -562,5 +552,15 @@ export default class TypeVisitor {
       );
       return new AnyType();
     }
+  }
+
+  private visitBlockStatement(node: t.BlockStatement) {
+    this.symbolTable = new SymbolTable(this.symbolTable);
+    node.body.forEach((stmt) => this.visitStatement(stmt));
+    if (this.symbolTable.getParentScope() == null) {
+      throw new Error("Mismatched scope");
+    }
+    this.symbolTable.overwriteUpOne();
+    this.symbolTable = this.symbolTable.getParentScope() as SymbolTable;
   }
 }
