@@ -102,6 +102,6 @@ and demonstrate how our type checker can help mitigate them.
 
 As of now, we have three major tasks remaining:
 
-- Type checking for expressions
+- Type checking `for` expressions
 - Compound assignment checking
 - Type specialization (time permitting)
