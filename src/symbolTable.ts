@@ -56,6 +56,36 @@ export default class SymbolTable {
     this.localMapping.set(variableName, newType);
   }
 
+  private addVariableType(variableName: string, newType: Type) {
+    if (this.localMapping.has(variableName)) {
+      let oldType = this.localMapping.get(variableName) as Type;
+      this.localMapping.set(
+        variableName,
+        UnionType.asNeeded([newType, oldType]),
+      );
+    } else {
+      this.parentScope?.addVariableType(variableName, newType);
+    }
+  }
+
+  public mergeVariableType(variableName: string, newType: Type) {
+    if (this.localMapping.has(variableName)) {
+      let oldType = this.localMapping.get(variableName) as Type;
+      this.localMapping.set(
+        variableName,
+        UnionType.asNeeded([newType, oldType]),
+      );
+    } else if (this.parentModifiedMapping.has(variableName)) {
+      let oldType = this.parentModifiedMapping.get(variableName) as Type;
+      this.parentModifiedMapping.set(
+        variableName,
+        UnionType.asNeeded([newType, oldType]),
+      );
+    } else {
+      this.parentModifiedMapping.set(variableName, newType);
+    }
+  }
+
   // Everything in the modified mapping overwrite the local mapping/modified mapping of parent
   public overwriteUpOne() {
     if (this.parentScope != null) {
@@ -63,6 +93,34 @@ export default class SymbolTable {
         this.parentScope?.setVariableType(key, value);
       });
     }
+  }
+
+  public mergeUpToDecl() {
+    if (this.parentScope != null) {
+      this.parentModifiedMapping.forEach((value, key) => {
+        this.parentScope?.addVariableType(key, value);
+      });
+    }
+  }
+
+  public overwriteForBothModified(other: SymbolTable) {
+    this.parentModifiedMapping.forEach((value, key) => {
+      if (other.parentModifiedMapping.has(key)) {
+        let newType = UnionType.asNeeded([
+          value,
+          other.parentModifiedMapping.get(key)!,
+        ]);
+        this.parentScope?.setVariableType(key, newType);
+        other.parentModifiedMapping.delete(key);
+        this.parentModifiedMapping.delete(key);
+      }
+    });
+  }
+
+  public mergeUpOne() {
+    this.parentModifiedMapping.forEach((value, key) => {
+      this.parentScope?.mergeVariableType(key, value);
+    });
   }
 }
 

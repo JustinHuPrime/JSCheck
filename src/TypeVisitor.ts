@@ -51,6 +51,9 @@ export default class TypeVisitor {
       case "BlockStatement":
         this.visitBlockStatement(node);
         break;
+      case "IfStatement":
+        this.visitIfStatement(node);
+        break;
       default:
         console.debug(
           `visitStatement: node of type ${node.type} not supported, skipping.`,
@@ -565,5 +568,23 @@ export default class TypeVisitor {
     }
     this.symbolTable.overwriteUpOne();
     this.symbolTable = this.symbolTable.getParentScope() as SymbolTable;
+  }
+
+  private visitIfStatement(node: t.IfStatement) {
+    this.visitExpression(node.test); // visit in case there is some side effect but with type coercion this can be anything
+    let initialEnv = this.symbolTable;
+    let trueEnv = new SymbolTable(initialEnv);
+    this.symbolTable = trueEnv;
+    this.visitStatement(node.consequent);
+    if (t.isStatement(node.alternate)) {
+      this.symbolTable = new SymbolTable(initialEnv);
+      this.visitStatement(node.alternate);
+      trueEnv.overwriteForBothModified(this.symbolTable);
+      trueEnv.mergeUpOne();
+      this.symbolTable.mergeUpOne();
+    } else {
+      trueEnv.mergeUpToDecl();
+    }
+    this.symbolTable = initialEnv;
   }
 }
