@@ -596,7 +596,7 @@ export default class TypeVisitor {
     let initialEnv = this.symbolTable;
     this.symbolTable = new SymbolTable(initialEnv);
 
-    if (t.isDeclareVariable(node.left)) {
+    if (t.isVariableDeclaration(node.left)) {
       this.visitVariableDeclaration(node.left);
     } else if (t.isExpression(node.left)) {
       this.visitExpression(node.left);
@@ -606,14 +606,14 @@ export default class TypeVisitor {
     let iterType = this.visitExpression(node.right);
     if (t.isForOfStatement(node) && !this.isArrayOrObject(iterType)) {
       report.addError(
-        `For Of loops must iterate over arrays or objects, instead given ${iterType}`,
+        `For...of loops must iterate over arrays or objects, instead given ${iterType}`,
         this.filename,
         node.right.loc?.start.line,
         node.right.loc?.start.column,
       );
     } else if (t.isForInStatement(node) && !this.isStringOrArray(iterType)) {
       report.addError(
-        `For In loops must iterate over arrays or strings, instead given ${iterType}`,
+        `For..in loops must iterate over arrays or strings, instead given ${iterType}`,
         this.filename,
         node.right.loc?.start.line,
         node.right.loc?.start.column,
