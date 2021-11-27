@@ -630,7 +630,7 @@ export default class TypeVisitor {
     let initialEnv = this.symbolTable;
     this.symbolTable = new SymbolTable(initialEnv);
 
-    if (t.isDeclareVariable(node.init)) {
+    if (t.isVariableDeclaration(node.init)) {
       this.visitVariableDeclaration(node.init);
     } else if (t.isExpression(node.init)) {
       this.visitExpression(node.init);
