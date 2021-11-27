@@ -446,4 +446,84 @@ describe("Integration Tests", () => {
       ]),
     );
   });
+
+  it("For loop - array access", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-loop-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(symbolTable.get("lenSum"), new NumberType());
+    assert.deepEqual(
+      symbolTable.get("strings"),
+      new ArrayType(new StringType()),
+    );
+  });
+
+  it("For loop - assigning to index variable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-loop-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(symbolTable.get("lenSum"), new NumberType());
+  });
+
+  it("For loop - assigning to index variable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-loop-temp-var.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(
+      symbolTable.get("x"),
+      UnionType.asNeeded([new NumberType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...in - loop over array indices", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-in-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(symbolTable.get("result"), new NumberType());
+  });
+
+  it("For...in - loop over object keys", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-in-object.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(
+      symbolTable.get("a"),
+      new ObjectType({
+        a: new NumberType(),
+        b: new NumberType(),
+        c: new NumberType(),
+      }),
+    );
+    assert.deepEqual(
+      symbolTable.get("last"),
+      UnionType.asNeeded([new StringType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...in - loop over string indices", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-in-string.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(
+      symbolTable.get("last"),
+      UnionType.asNeeded([new NumberType(), new UndefinedType()]),
+    );
+  });
 });
