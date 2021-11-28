@@ -40,7 +40,6 @@ export default class TypeVisitor {
   }
 
   visitStatement(node: t.Statement): void {
-    console.log(`visit: seeing a ${node.type}`);
     switch (node.type) {
       case "VariableDeclaration":
         this.visitVariableDeclaration(node);
@@ -63,7 +62,6 @@ export default class TypeVisitor {
   }
 
   visitExpression(node: t.Expression): Type {
-    console.log(`visit: seeing a ${node.type}`);
     switch (node.type) {
       case "NullLiteral":
         return new NullType();
