@@ -569,8 +569,11 @@ export class UnionType extends Type {
   }
 
   public override getSpreadType(): Type {
-    this.types = this.types.filter((type) => type.isIterable());
-    return this;
+    return UnionType.asNeeded(
+      this.types
+        .filter((type) => type.isIterable())
+        .map((type) => type.getSpreadType()),
+    );
   }
 
   public toPrimitive(): Type {

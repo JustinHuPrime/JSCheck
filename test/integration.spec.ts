@@ -490,7 +490,10 @@ describe("Integration Tests", () => {
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
     assert.equal(symbolTable.size, 1);
-    assert.deepEqual(symbolTable.get("result"), new NumberType());
+    assert.deepEqual(
+      symbolTable.get("result"),
+      UnionType.asNeeded([new NumberType(), new UndefinedType()]),
+    );
   });
 
   it("For...in - loop over object keys", () => {
@@ -499,7 +502,7 @@ describe("Integration Tests", () => {
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
-    assert.equal(symbolTable.size, 1);
+    assert.equal(symbolTable.size, 2);
     assert.deepEqual(
       symbolTable.get("a"),
       new ObjectType({
