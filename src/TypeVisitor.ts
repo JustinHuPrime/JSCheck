@@ -627,6 +627,10 @@ export default class TypeVisitor {
         node.right.loc?.start.line,
         node.right.loc?.start.column,
       );
+
+      this.symbolTable.mergeUpOne();
+      this.symbolTable = initialEnv;
+      return;
     }
 
     if (t.isVariableDeclaration(node.left)) {
@@ -660,6 +664,10 @@ export default class TypeVisitor {
         node.right.loc?.start.line,
         node.right.loc?.start.column,
       );
+
+      this.symbolTable.mergeUpOne();
+      this.symbolTable = initialEnv;
+      return;
     }
 
     if (t.isVariableDeclaration(node.left)) {
