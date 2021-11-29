@@ -506,4 +506,157 @@ describe("Integration Tests", () => {
       ]),
     );
   });
+
+  it("For loop - array access", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-loop-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(symbolTable.get("lenSum"), new NumberType());
+    assert.deepEqual(
+      symbolTable.get("strings"),
+      new ArrayType(new StringType()),
+    );
+  });
+
+  it("For loop - assigning to index variable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-loop-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(symbolTable.get("lenSum"), new NumberType());
+  });
+
+  it("For loop - assigning to index variable", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-loop-temp-var.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(
+      symbolTable.get("x"),
+      UnionType.asNeeded([new NumberType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...in - loop over array indices", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-in-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(
+      symbolTable.get("result"),
+      UnionType.asNeeded([new NumberType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...in - loop over object keys", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-in-object.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(
+      symbolTable.get("a"),
+      new ObjectType({
+        a: new NumberType(),
+        b: new NumberType(),
+        c: new NumberType(),
+      }),
+    );
+    assert.deepEqual(
+      symbolTable.get("last"),
+      UnionType.asNeeded([new StringType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...in - loop over string indices", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-in-string.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(
+      symbolTable.get("last"),
+      UnionType.asNeeded([new NumberType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...of - loop over array", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-of-array.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(
+      symbolTable.get("result"),
+      UnionType.asNeeded([
+        new NumberType(),
+        new StringType(),
+        new BooleanType(),
+        new UndefinedType(),
+      ]),
+    );
+  });
+
+  it("For...of - loop over string", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/for-of-string.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+    assert.deepEqual(
+      symbolTable.get("result"),
+      UnionType.asNeeded([new StringType(), new UndefinedType()]),
+    );
+  });
+
+  it("For...of - error not iterable", () => {
+    typecheckFiles(["./test/test-examples/for-of-error-not-iterable.js"]);
+    assert.equal(
+      report.getErrors().length,
+      1,
+      "Expected error report to contain 1 error",
+    );
+    assert.equal(
+      report.getErrors()[0]!.message,
+      "For...of loops must iterate over arrays or strings, instead given NumberType",
+    );
+  });
+
+  it("For...of - error can't iterate over object", () => {
+    typecheckFiles(["./test/test-examples/for-of-error-on-object.js"]);
+    assert.equal(
+      report.getErrors().length,
+      1,
+      "Expected error report to contain 1 error",
+    );
+    assert.equal(
+      report.getErrors()[0]!.message,
+      "For...of loops must iterate over arrays or strings, instead given ObjectType[[object Object]]",
+    );
+  });
+
+  it("For...of - error sorting mixed type", () => {
+    typecheckFiles(["./test/test-examples/for-of-error-mixedtype.js"]);
+    assert.equal(
+      report.getErrors().length,
+      1,
+      "Expected error report to contain 1 error",
+    );
+    assert.equal(
+      report.getErrors()[0]!.message,
+      "Method sort does not exist on type UnionType[ArrayType[NumberType]|NumberType|StringType|UndefinedType]",
+    );
+  });
 });

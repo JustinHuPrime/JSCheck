@@ -53,6 +53,15 @@ export default class TypeVisitor {
       case "IfStatement":
         this.visitIfStatement(node);
         break;
+      case "ForOfStatement":
+        this.visitForOfStatement(node);
+        break;
+      case "ForInStatement":
+        this.visitForInStatement(node);
+        break;
+      case "ForStatement":
+        this.visitForStatement(node);
+        break;
       default:
         console.debug(
           `visitStatement: node of type ${node.type} not supported, skipping.`,
@@ -584,5 +593,168 @@ export default class TypeVisitor {
       trueEnv.mergeUpToDecl();
     }
     this.symbolTable = initialEnv;
+  }
+
+  private visitForStatement(node: t.ForStatement) {
+    let initialEnv = this.symbolTable;
+    this.symbolTable = new SymbolTable(initialEnv);
+
+    if (t.isVariableDeclaration(node.init)) {
+      this.visitVariableDeclaration(node.init);
+    } else if (t.isExpression(node.init)) {
+      this.visitExpression(node.init);
+    }
+    if (t.isExpression(node.test)) {
+      this.visitExpression(node.test);
+    }
+    if (t.isExpression(node.update)) {
+      this.visitExpression(node.update);
+    }
+    this.visitStatement(node.body);
+
+    this.symbolTable.mergeUpOne();
+    this.symbolTable = initialEnv;
+  }
+
+  private visitForOfStatement(node: t.ForOfStatement) {
+    let initialEnv = this.symbolTable;
+    this.symbolTable = new SymbolTable(initialEnv);
+
+    let iterType = this.visitExpression(node.right);
+    if (!this.isArrayOrString(iterType)) {
+      report.addError(
+        `For...of loops must iterate over arrays or strings, instead given ${iterType}`,
+        this.filename,
+        node.right.loc?.start.line,
+        node.right.loc?.start.column,
+      );
+
+      this.symbolTable.mergeUpOne();
+      this.symbolTable = initialEnv;
+      return;
+    }
+
+    if (t.isVariableDeclaration(node.left)) {
+      this.visitVariableDeclarationWithType(
+        node.left,
+        iterType.getSpreadType(),
+      );
+    } else if (t.isIdentifier(node.left)) {
+      this.setVariableType(node.left.name, iterType.getSpreadType(), node.left);
+    } else if (t.isExpression(node.left)) {
+      this.visitExpression(node.left);
+    } else {
+      throw new Error("Reached impossible state according to documentation");
+    }
+
+    this.visitStatement(node.body);
+
+    this.symbolTable.mergeUpOne();
+    this.symbolTable = initialEnv;
+  }
+
+  private visitForInStatement(node: t.ForInStatement) {
+    let initialEnv = this.symbolTable;
+    this.symbolTable = new SymbolTable(initialEnv);
+
+    let iterType = this.visitExpression(node.right);
+    if (!iterType.isIterable()) {
+      report.addError(
+        `For..in loops must iterate over arrays, strings or objects, instead given ${iterType}`,
+        this.filename,
+        node.right.loc?.start.line,
+        node.right.loc?.start.column,
+      );
+
+      this.symbolTable.mergeUpOne();
+      this.symbolTable = initialEnv;
+      return;
+    }
+
+    if (t.isVariableDeclaration(node.left)) {
+      this.visitVariableDeclarationWithType(
+        node.left,
+        this.getIndexType(iterType),
+      );
+    } else if (t.isIdentifier(node.left)) {
+      this.setVariableType(
+        node.left.name,
+        this.getIndexType(iterType),
+        node.left,
+      );
+    } else if (t.isExpression(node.left)) {
+      this.visitExpression(node.left);
+    } else {
+      throw new Error("Reached impossible state according to documentation");
+    }
+
+    this.visitStatement(node.body);
+
+    this.symbolTable.mergeUpOne();
+    this.symbolTable = initialEnv;
+  }
+
+  private isArrayOrObject(iterType: Type): boolean {
+    if (iterType instanceof UnionType) {
+      return (
+        iterType.types.filter((type) => this.isArrayOrObject(type)).length != 0
+      );
+    }
+    return (
+      iterType instanceof ArrayType ||
+      iterType instanceof ObjectType ||
+      iterType instanceof AnyType
+    );
+  }
+
+  private isArrayOrString(iterType: Type): boolean {
+    if (iterType instanceof UnionType) {
+      return (
+        iterType.types.filter((type) => this.isArrayOrString(type)).length != 0
+      );
+    }
+    return (
+      iterType instanceof ArrayType ||
+      iterType instanceof StringType ||
+      iterType instanceof AnyType
+    );
+  }
+
+  private getIndexType(iterType: Type): Type {
+    if (iterType instanceof ArrayType || iterType instanceof StringType) {
+      return new NumberType();
+    }
+    if (iterType instanceof ObjectType) {
+      return new StringType();
+    }
+    if (iterType instanceof UnionType) {
+      return UnionType.asNeeded(
+        iterType.types
+          .filter((type) => this.isArrayOrObject(type))
+          .map((type) => this.getIndexType(type)),
+      );
+    }
+    return UnionType.asNeeded([new NumberType(), new StringType()]);
+  }
+
+  private visitVariableDeclarationWithType(
+    node: t.VariableDeclaration,
+    type: Type,
+  ) {
+    if (node.kind === "var") {
+      // TODO: care about global vars (only in blocks, not in functions, but when undeclared too)
+      console.warn(
+        "we might not treat the scope for var correctly within blocks",
+      );
+    }
+
+    for (let declaration of node.declarations) {
+      if (!t.isIdentifier(declaration.id)) {
+        throw new Error(
+          "Pattern matching variable declarations are not supported.",
+        );
+      }
+      this.declareVariableType(declaration.id.name, type);
+    }
   }
 }
