@@ -345,7 +345,17 @@ export default class TypeVisitor {
                 break;
               }
             } else if (lhsType instanceof ObjectType && propertyName) {
-              lhsType.fields[propertyName] = rhsType;
+              // Union types together if the object field previously had something else
+              // This allows assignments to properties inside an if statement to work
+              let oldRhsType = lhsType.fields[propertyName];
+              if (oldRhsType) {
+                lhsType.fields[propertyName] = UnionType.asNeeded([
+                  rhsType,
+                  oldRhsType,
+                ]);
+              } else {
+                lhsType.fields[propertyName] = rhsType;
+              }
             } else {
               console.warn(
                 `visitAssignmentExpression: unsupported assignment type for node ${node}.`,
