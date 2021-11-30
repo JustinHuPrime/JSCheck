@@ -73,6 +73,9 @@ class ErrorReport {
 
   public printErrors(): void {
     this.errors.sort(Error.compare);
+    if (!this.errors.length) {
+      console.log("No errors found!");
+    }
     for (const error of this.errors) {
       console.error(error.toString());
     }

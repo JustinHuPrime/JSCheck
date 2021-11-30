@@ -1,3 +1,5 @@
+import { logVerbose } from "./utils";
+
 export type TypeMap = { [key: string]: Type };
 
 export default class SymbolTable {
@@ -475,7 +477,7 @@ export class ArrayType extends Type {
     let result = super.getMethodReturnType(methodName, inputArgTypes);
     if (["push", "unshift"].includes(methodName) && inputArgTypes) {
       // These functions modify the array type as a side effect
-      console.debug(
+      logVerbose(
         `ArrayType.getMethodReturnType: extending array type with ${inputArgTypes}`,
       );
       this.elementType = this.extend(inputArgTypes).elementType;
@@ -529,7 +531,7 @@ export class UnionType extends Type {
 
   // Union constructor that normalizes nested unions, removes duplicates, and strips unions of 1 type
   static asNeeded(types: Type[]) {
-    console.log(`UnionType.asNeeded: got ${types}`);
+    logVerbose(`UnionType.asNeeded: got ${types}`);
     let normalizedTypes = [];
     // collapse nested unions
     for (let type of types) {
@@ -618,7 +620,7 @@ export class UnionType extends Type {
         returnTypes.push(returnType);
       }
     }
-    console.log(`${this}.getPropertyType(${propertyName}) => ${returnTypes}`);
+    logVerbose(`${this}.getPropertyType(${propertyName}) => ${returnTypes}`);
     return UnionType.asNeeded(returnTypes);
   }
 }

@@ -14,6 +14,7 @@ import SymbolTable, {
   UnionType,
 } from "./symbolTable";
 import report from "./errorReport";
+import { logVerbose } from "./utils";
 
 export default class TypeVisitor {
   private symbolTable: SymbolTable;
@@ -40,6 +41,7 @@ export default class TypeVisitor {
   }
 
   visitStatement(node: t.Statement): void {
+    logVerbose(`visit: seeing a ${node.type}`);
     switch (node.type) {
       case "VariableDeclaration":
         this.visitVariableDeclaration(node);
@@ -63,7 +65,7 @@ export default class TypeVisitor {
         this.visitForStatement(node);
         break;
       default:
-        console.debug(
+        console.warn(
           `visitStatement: node of type ${node.type} not supported, skipping.`,
         );
         break;
@@ -71,6 +73,7 @@ export default class TypeVisitor {
   }
 
   visitExpression(node: t.Expression): Type {
+    logVerbose(`visit: seeing a ${node.type}`);
     switch (node.type) {
       case "NullLiteral":
         return new NullType();
@@ -107,10 +110,10 @@ export default class TypeVisitor {
       case "CallExpression":
         return this.visitCallExpression(node);
       default:
-        console.debug(
+        console.warn(
           `visitExpression: node of type ${node.type} not supported, returning Any.`,
         );
-        console.debug(node);
+        console.warn(node);
         return new AnyType();
     }
   }
@@ -265,7 +268,7 @@ export default class TypeVisitor {
         return new StringType();
       }
       default: {
-        console.log(
+        console.warn(
           `encountered unsupported UnaryExpression ${node} (operator was ${node.operator})`,
         );
         return new AnyType();
@@ -513,7 +516,7 @@ export default class TypeVisitor {
     console.warn(
       `visitMemberExpression: unsupported property access (${propertyType} on ${objectType})`,
     );
-    console.debug(node);
+    console.warn(node);
     return new UndefinedType();
   }
 
