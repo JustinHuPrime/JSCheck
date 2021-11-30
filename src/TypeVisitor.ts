@@ -280,6 +280,11 @@ export default class TypeVisitor {
     try {
       if (global.hasOwnProperty(variableName)) {
         // This is a JS global (e.g. "console")
+        if (variableName === "undefined") {
+          // undefined is not a literal but a global variable!!
+          return new UndefinedType();
+        }
+        logVerbose(`Returning any type for JS global variableName`);
         return new AnyType();
       }
       return this.symbolTable.getVariableType(variableName);
