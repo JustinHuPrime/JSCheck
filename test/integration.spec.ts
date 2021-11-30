@@ -660,6 +660,42 @@ describe("Integration Tests", () => {
     );
   });
 
+  it("Binary operators - addition", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/binops-add.js",
+    ]).getMap();
+    assert.equal(report.getErrors().length, 0, "Expected no errors");
+    assert.deepEqual(
+      symbolTable.get("a"),
+      UnionType.asNeeded([new NumberType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("b"),
+      UnionType.asNeeded([new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("c"),
+      UnionType.asNeeded([new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("d"),
+      UnionType.asNeeded([new StringType()]),
+    );
+  });
+
+  it("Binary operators - arithmetic", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/binops-arithmetic.js",
+    ]).getMap();
+    assert.equal(report.getErrors().length, 0, "Expected no errors");
+    for (let varName of ["a", "b", "c", "d", "e"]) {
+      assert.deepEqual(
+        symbolTable.get(varName),
+        UnionType.asNeeded([new NumberType()]),
+      );
+    }
+  });
+
   it("declaration with no value", () => {
     const symbolTable = typecheckFiles(["./test/test-examples/declaration-no-value.js"]).getMap();
 
