@@ -659,4 +659,58 @@ describe("Integration Tests", () => {
       "Method sort does not exist on type UnionType[ArrayType[NumberType]|NumberType|StringType|UndefinedType]",
     );
   });
-});
+
+  it("declaration with no value", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/declaration-no-value.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+
+    assert.deepEqual(
+      symbolTable.get("x"),
+      new UndefinedType()
+    );
+  });
+
+  it("assign mixed types to array", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/if-array-element-else.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+
+    assert.deepEqual(
+      symbolTable.get("arr"),
+      new ArrayType(UnionType.asNeeded([new NumberType(), new StringType(), new UndefinedType()])))
+  });
+
+  it("should not throw an error when assigning if array element", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/if-object-property-else.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 3);
+
+    console.log(symbolTable);
+
+    assert.deepEqual(
+      symbolTable.get("person"),
+      new ObjectType({ name: new StringType(), age: new NumberType(), id: UnionType.asNeeded([new NullType(), new NumberType(), new StringType()])}))
+  });
+
+  it("should not throw an error when assigning new value to object", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/if-object-property.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 3);
+
+    console.log(symbolTable);
+
+    assert.deepEqual(
+      symbolTable.get("person"),
+      new ObjectType({ name: new StringType(), age: new NumberType(), id: UnionType.asNeeded([new NullType(), new NumberType()])}));
+  });
+})
+
