@@ -27,7 +27,7 @@ describe("Integration Tests", () => {
 
   it("Simple assignment", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/simple-assignment.js",
+      "./test/test-examples/assignment-simple.js",
     ]).getMap();
     assert.equal(
       report.isEmpty(),
@@ -47,7 +47,7 @@ describe("Integration Tests", () => {
 
   it("Simple assignment with console.log", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/simple-assignment-with-logging.js",
+      "./test/test-examples/assignment-simple-with-logging.js",
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Error report should be empty");
 
@@ -71,7 +71,7 @@ describe("Integration Tests", () => {
 
   it("Reassignment: simple - single variable", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/assignment-simple.js",
+      "./test/test-examples/assignment-reassignment.js",
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
@@ -659,4 +659,58 @@ describe("Integration Tests", () => {
       "Method sort does not exist on type UnionType[ArrayType[NumberType]|NumberType|StringType|UndefinedType]",
     );
   });
-});
+
+  it("declaration with no value", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/declaration-no-value.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+
+    assert.deepEqual(
+      symbolTable.get("x"),
+      new UndefinedType()
+    );
+  });
+
+  it("assign mixed types to array", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/if-array-element-else.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 1);
+
+    assert.deepEqual(
+      symbolTable.get("arr"),
+      new ArrayType(UnionType.asNeeded([new NumberType(), new StringType(), new UndefinedType()])))
+  });
+
+  it("should not throw an error when assigning if array element", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/if-object-property-else.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 3);
+
+    console.log(symbolTable);
+
+    assert.deepEqual(
+      symbolTable.get("person"),
+      new ObjectType({ name: new StringType(), age: new NumberType(), id: UnionType.asNeeded([new NullType(), new NumberType(), new StringType()])}))
+  });
+
+  it("should not throw an error when assigning new value to object", () => {
+    const symbolTable = typecheckFiles(["./test/test-examples/if-object-property.js"]).getMap();
+
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 3);
+
+    console.log(symbolTable);
+
+    assert.deepEqual(
+      symbolTable.get("person"),
+      new ObjectType({ name: new StringType(), age: new NumberType(), id: UnionType.asNeeded([new NullType(), new NumberType()])}));
+  });
+})
+

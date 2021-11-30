@@ -30,7 +30,10 @@ typeChecker.typeCheck();
 report.printErrors();
 if (args.show_symbols) {
   for (let filename of args.files) {
-    console.log(`${filename}:`, typeChecker.getSymbolTable(filename));
+    console.log(`${filename}:`);
+    console.dir(typeChecker.getSymbolTable(filename)?.getMap(), {
+      depth: null,
+    });
   }
 }
 if (report.isEmpty()) {
