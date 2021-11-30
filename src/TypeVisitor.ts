@@ -407,6 +407,9 @@ export default class TypeVisitor {
 
   private visitArrayExpression(node: t.ArrayExpression): Type {
     if (node.elements == null) {
+      logVerbose(
+        `visitArrayExpression: creating any type list since it is empty`,
+      );
       return new ArrayType(new AnyType());
     } else {
       let elementTypes: Type[] = [];
@@ -424,6 +427,7 @@ export default class TypeVisitor {
           return value.toString() === new AnyType().toString();
         })
       ) {
+        logVerbose(`visitArrayExpression: some elements are any`);
         return new ArrayType(new AnyType());
       }
       elementTypes = elementTypes.filter((value, index, arry) => {
@@ -605,11 +609,15 @@ export default class TypeVisitor {
       this.symbolTable = new SymbolTable(initialEnv);
       this.visitStatement(node.alternate);
       trueEnv.overwriteForBothModified(this.symbolTable);
+      logVerbose(`trueEnv mapping: `, trueEnv.getMap());
+      logVerbose(`falseEnv mapping: `, this.symbolTable.getMap());
       trueEnv.mergeUpOne();
       this.symbolTable.mergeUpOne();
     } else {
+      logVerbose(`trueEnv mapping: `, trueEnv.getMap());
       trueEnv.mergeUpToDecl();
     }
+    logVerbose(`mapping after if merge: `, initialEnv.getMap());
     this.symbolTable = initialEnv;
   }
 
