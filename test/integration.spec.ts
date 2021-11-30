@@ -11,6 +11,7 @@ import SymbolTable, {
   StringType,
   UndefinedType,
   UnionType,
+  VoidType,
 } from "../src/symbolTable";
 
 describe("Integration Tests", () => {
@@ -56,6 +57,21 @@ describe("Integration Tests", () => {
       new Map([
         ["x", new NumberType()],
         ["y", new StringType()],
+      ]),
+    );
+  });
+
+  it("Assignment with +=", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/assignment-plus-equals.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Error report should be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", new NumberType()],
+        ["s", new StringType()],
       ]),
     );
   });
@@ -120,6 +136,17 @@ describe("Integration Tests", () => {
         ["x", new NumberType()],
       ]),
     );
+  });
+
+  it("Lists: empty lists are void type until values are added", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/lists-empty-are-void-type.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.equal(symbolTable.size, 2);
+    assert.deepEqual(symbolTable.get("lst1"), new ArrayType(new VoidType()));
+    assert.deepEqual(symbolTable.get("lst2"), new ArrayType(new NumberType()));
   });
 
   it("Objects: declaration, reading, assigning with single type properties", () => {
@@ -449,7 +476,14 @@ describe("Integration Tests", () => {
     assert.deepEqual(
       symbolTable,
       new Map([
-        ["x", UnionType.asNeeded([new BooleanType(), new StringType()])],
+        [
+          "x",
+          UnionType.asNeeded([
+            new BooleanType(),
+            new StringType(),
+            new NumberType(),
+          ]),
+        ],
       ]),
     );
   });
@@ -486,6 +520,7 @@ describe("Integration Tests", () => {
         new ArrayType(new NumberType()),
         new BooleanType(),
         new NumberType(),
+        new StringType(),
       ]),
     );
     assert.deepEqual(
@@ -503,6 +538,28 @@ describe("Integration Tests", () => {
         new UndefinedType(),
         new StringType(),
         new NumberType(),
+      ]),
+    );
+  });
+
+  it("If / else if chain", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-else-if-chain.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        [
+          "x",
+          UnionType.asNeeded([
+            new NullType(),
+            new UndefinedType(),
+            new StringType(),
+            new ArrayType(new VoidType()),
+          ]),
+        ],
       ]),
     );
   });
@@ -660,21 +717,58 @@ describe("Integration Tests", () => {
     );
   });
 
+  it("Binary operators - addition", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/binops-add.js",
+    ]).getMap();
+    assert.equal(report.getErrors().length, 0, "Expected no errors");
+    assert.deepEqual(
+      symbolTable.get("a"),
+      UnionType.asNeeded([new NumberType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("b"),
+      UnionType.asNeeded([new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("c"),
+      UnionType.asNeeded([new StringType()]),
+    );
+    assert.deepEqual(
+      symbolTable.get("d"),
+      UnionType.asNeeded([new StringType()]),
+    );
+  });
+
+  it("Binary operators - arithmetic", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/binops-arithmetic.js",
+    ]).getMap();
+    assert.equal(report.getErrors().length, 0, "Expected no errors");
+    for (let varName of ["a", "b", "c", "d", "e"]) {
+      assert.deepEqual(
+        symbolTable.get(varName),
+        UnionType.asNeeded([new NumberType()]),
+      );
+    }
+  });
+
   it("declaration with no value", () => {
-    const symbolTable = typecheckFiles(["./test/test-examples/declaration-no-value.js"]).getMap();
+    const symbolTable = typecheckFiles([
+      "./test/test-examples/declaration-no-value.js",
+    ]).getMap();
 
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
     assert.equal(symbolTable.size, 1);
 
-    assert.deepEqual(
-      symbolTable.get("x"),
-      new UndefinedType()
-    );
+    assert.deepEqual(symbolTable.get("x"), new UndefinedType());
   });
 
   it("assign mixed types to array", () => {
-    const symbolTable = typecheckFiles(["./test/test-examples/if-array-element-else.js"]).getMap();
+    const symbolTable = typecheckFiles([
+      "./test/test-examples/if-array-element-else.js",
+    ]).getMap();
 
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
@@ -682,11 +776,20 @@ describe("Integration Tests", () => {
 
     assert.deepEqual(
       symbolTable.get("arr"),
-      new ArrayType(UnionType.asNeeded([new NumberType(), new StringType(), new UndefinedType()])))
+      new ArrayType(
+        UnionType.asNeeded([
+          new NumberType(),
+          new StringType(),
+          new UndefinedType(),
+        ]),
+      ),
+    );
   });
 
   it("should not throw an error when assigning if array element", () => {
-    const symbolTable = typecheckFiles(["./test/test-examples/if-object-property-else.js"]).getMap();
+    const symbolTable = typecheckFiles([
+      "./test/test-examples/if-object-property-else.js",
+    ]).getMap();
 
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
@@ -696,11 +799,22 @@ describe("Integration Tests", () => {
 
     assert.deepEqual(
       symbolTable.get("person"),
-      new ObjectType({ name: new StringType(), age: new NumberType(), id: UnionType.asNeeded([new NullType(), new NumberType(), new StringType()])}))
+      new ObjectType({
+        name: new StringType(),
+        age: new NumberType(),
+        id: UnionType.asNeeded([
+          new NullType(),
+          new NumberType(),
+          new StringType(),
+        ]),
+      }),
+    );
   });
 
   it("should not throw an error when assigning new value to object", () => {
-    const symbolTable = typecheckFiles(["./test/test-examples/if-object-property.js"]).getMap();
+    const symbolTable = typecheckFiles([
+      "./test/test-examples/if-object-property.js",
+    ]).getMap();
 
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
@@ -710,7 +824,11 @@ describe("Integration Tests", () => {
 
     assert.deepEqual(
       symbolTable.get("person"),
-      new ObjectType({ name: new StringType(), age: new NumberType(), id: UnionType.asNeeded([new NullType(), new NumberType()])}));
+      new ObjectType({
+        name: new StringType(),
+        age: new NumberType(),
+        id: UnionType.asNeeded([new NullType(), new NumberType()]),
+      }),
+    );
   });
-})
-
+});

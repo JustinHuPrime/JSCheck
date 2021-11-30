@@ -21,3 +21,4 @@ output.sort();
  * (Level 2) Attempted to call 'sort' on type string (15:8)
  *
  * **/
+

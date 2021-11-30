@@ -7,3 +7,9 @@ export function logVerbose(...data: any[]) {
     console.log(...data);
   }
 }
+
+export function logObjectVerbose(obj: any) {
+  if (globalThis.verbose) {
+    console.dir(obj, { depth: null });
+  }
+}
