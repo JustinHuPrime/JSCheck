@@ -284,7 +284,7 @@ export default class TypeVisitor {
           // undefined is not a literal but a global variable!!
           return new UndefinedType();
         }
-        logVerbose(`Returning any type for JS global variableName`);
+        logVerbose(`Returning any type for JS global ${variableName}`);
         return new AnyType();
       }
       return this.symbolTable.getVariableType(variableName);
@@ -347,7 +347,9 @@ export default class TypeVisitor {
                 // Extend the array type in-place to support circular types
                 lhsType.extend([rhsType], true);
               } else {
-                break;
+                console.warn(
+                  `visitAssignmentExpression: only numerical array indices are supported`,
+                );
               }
             } else if (lhsType instanceof ObjectType && propertyName) {
               // Union types together if the object field previously had something else
@@ -361,12 +363,9 @@ export default class TypeVisitor {
               } else {
                 lhsType.fields[propertyName] = rhsType;
               }
-            } else {
-              console.warn(
-                `visitAssignmentExpression: unsupported assignment type for node ${node}.`,
-              );
             }
           }
+
           // Otherwise, I don't think there's anything to do? JS will accept assigning to members of anything -
           // for numbers and strings it appears to just be a noop -JL
           return rhsType;
