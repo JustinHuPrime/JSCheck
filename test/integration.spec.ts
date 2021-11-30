@@ -476,7 +476,14 @@ describe("Integration Tests", () => {
     assert.deepEqual(
       symbolTable,
       new Map([
-        ["x", UnionType.asNeeded([new BooleanType(), new StringType()])],
+        [
+          "x",
+          UnionType.asNeeded([
+            new BooleanType(),
+            new StringType(),
+            new NumberType(),
+          ]),
+        ],
       ]),
     );
   });
@@ -513,6 +520,7 @@ describe("Integration Tests", () => {
         new ArrayType(new NumberType()),
         new BooleanType(),
         new NumberType(),
+        new StringType(),
       ]),
     );
     assert.deepEqual(
@@ -530,6 +538,28 @@ describe("Integration Tests", () => {
         new UndefinedType(),
         new StringType(),
         new NumberType(),
+      ]),
+    );
+  });
+
+  it("If / else if chain", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/if-else-if-chain.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Expected error report to be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        [
+          "x",
+          UnionType.asNeeded([
+            new NullType(),
+            new UndefinedType(),
+            new StringType(),
+            new ArrayType(new VoidType()),
+          ]),
+        ],
       ]),
     );
   });

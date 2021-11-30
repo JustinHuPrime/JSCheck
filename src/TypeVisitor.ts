@@ -15,7 +15,7 @@ import SymbolTable, {
   VoidType,
 } from "./symbolTable";
 import report from "./errorReport";
-import { logVerbose } from "./utils";
+import { logObjectVerbose, logVerbose } from "./utils";
 
 export default class TypeVisitor {
   private symbolTable: SymbolTable;
@@ -680,16 +680,21 @@ export default class TypeVisitor {
     if (t.isStatement(node.alternate)) {
       this.symbolTable = new SymbolTable(initialEnv);
       this.visitStatement(node.alternate);
-      trueEnv.overwriteForBothModified(this.symbolTable);
-      logVerbose(`trueEnv mapping: `, trueEnv.getMap());
-      logVerbose(`falseEnv mapping: `, this.symbolTable.getMap());
+      // XXX: this doesn't work with if/elseif chains with >= 3 branches
+      // trueEnv.overwriteForBothModified(this.symbolTable);
+      logVerbose(`trueEnv mapping: `);
+      logObjectVerbose(trueEnv);
+      logVerbose(`falseEnv mapping: `);
+      logObjectVerbose(this.symbolTable);
       trueEnv.mergeUpOne();
       this.symbolTable.mergeUpOne();
     } else {
-      logVerbose(`trueEnv mapping: `, trueEnv.getMap());
+      logVerbose(`trueEnv mapping: `);
+      logObjectVerbose(trueEnv);
       trueEnv.mergeUpToDecl();
     }
-    logVerbose(`mapping after if merge: `, initialEnv.getMap());
+    logVerbose(`mapping after if merge: `);
+    logObjectVerbose(initialEnv);
     this.symbolTable = initialEnv;
   }
 
