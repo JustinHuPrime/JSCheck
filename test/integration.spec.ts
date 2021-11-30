@@ -27,7 +27,7 @@ describe("Integration Tests", () => {
 
   it("Simple assignment", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/simple-assignment.js",
+      "./test/test-examples/assignment-simple.js",
     ]).getMap();
     assert.equal(
       report.isEmpty(),
@@ -47,7 +47,7 @@ describe("Integration Tests", () => {
 
   it("Simple assignment with console.log", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/simple-assignment-with-logging.js",
+      "./test/test-examples/assignment-simple-with-logging.js",
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Error report should be empty");
 
@@ -71,7 +71,7 @@ describe("Integration Tests", () => {
 
   it("Reassignment: simple - single variable", () => {
     let symbolTable = typecheckFiles([
-      "./test/test-examples/assignment-simple.js",
+      "./test/test-examples/assignment-reassignment.js",
     ]).getMap();
     assert.equal(report.isEmpty(), true, "Expected error report to be empty");
 
