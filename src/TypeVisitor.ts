@@ -12,6 +12,7 @@ import SymbolTable, {
   TypeMap,
   UndefinedType,
   UnionType,
+  VoidType,
 } from "./symbolTable";
 import report from "./errorReport";
 import { logVerbose } from "./utils";
@@ -405,11 +406,11 @@ export default class TypeVisitor {
   }
 
   private visitArrayExpression(node: t.ArrayExpression): Type {
-    if (node.elements == null) {
+    if (node.elements == null || node.elements.length === 0) {
       logVerbose(
         `visitArrayExpression: creating any type list since it is empty`,
       );
-      return new ArrayType(new AnyType());
+      return new ArrayType(new VoidType());
     } else {
       let elementTypes: Type[] = [];
       for (let element of node.elements) {

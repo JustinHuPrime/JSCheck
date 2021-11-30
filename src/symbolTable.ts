@@ -531,12 +531,18 @@ export class UnionType extends Type {
 
   // Union constructor that normalizes nested unions, removes duplicates, and strips unions of 1 type
   static asNeeded(types: Type[]) {
-    logVerbose(`UnionType.asNeeded: got ${types}`);
+    if (types.length === 0) {
+      throw new Error("Cannot create a union type with no subtypes");
+    }
     let normalizedTypes = [];
     // collapse nested unions
     for (let type of types) {
       if (type instanceof UnionType) {
         normalizedTypes.push(...type.types);
+      } else if (type instanceof AnyType) {
+        return type; // collapse unions containing Any
+      } else if (type instanceof VoidType) {
+        // Ignore it!
       } else {
         normalizedTypes.push(type);
       }
@@ -558,6 +564,7 @@ export class UnionType extends Type {
     if (normalizedTypes.length === 1) {
       return normalizedTypes[0]!;
     }
+    logVerbose(`UnionType.asNeeded: ${types} => ${normalizedTypes}`);
     return new UnionType(normalizedTypes);
   }
 
@@ -622,6 +629,13 @@ export class UnionType extends Type {
     }
     logVerbose(`${this}.getPropertyType(${propertyName}) => ${returnTypes}`);
     return UnionType.asNeeded(returnTypes);
+  }
+}
+
+// Used to represent empty arrays - disappears when used inside union!
+export class VoidType extends UndefinedType {
+  override toString() {
+    return "VoidType";
   }
 }
 
