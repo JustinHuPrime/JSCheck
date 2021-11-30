@@ -181,13 +181,15 @@ export default class TypeVisitor {
     return last;
   }
 
-  public visitBinaryExpression(node: t.BinaryExpression): Type {
-    // TODO: I'm assuming that types never have an exotic toPrimitive
-    // TODO: also assuming that node.left is never a PrivateName (exported object with no associated exported class)
-    const leftType = this.visitExpression(node.left as t.Expression);
-    const rightType = this.visitExpression(node.right);
-    switch (node.operator) {
+  private getBinaryOperationType(
+    leftType: Type,
+    rightType: Type,
+    operator: string,
+    node: t.Expression,
+  ): Type {
+    switch (operator) {
       case "+": {
+        // TODO: I'm assuming that types never have an exotic toPrimitive
         const lprim = leftType.toPrimitive();
         const rprim = rightType.toPrimitive();
         if (lprim instanceof AnyType || rprim instanceof AnyType) {
@@ -248,6 +250,25 @@ export default class TypeVisitor {
         return new BooleanType();
       }
     }
+    console.warn(`getBinaryOperationType: Unknown operator type ${operator}`);
+    return new AnyType();
+  }
+
+  public visitBinaryExpression(node: t.BinaryExpression): Type {
+    if (!t.isExpression(node.left)) {
+      console.warn(
+        `visitBinaryExpression: Unhandled LHS in binary expression: ${node}`,
+      );
+      return new AnyType();
+    }
+    const leftType = this.visitExpression(node.left);
+    const rightType = this.visitExpression(node.right);
+    return this.getBinaryOperationType(
+      leftType,
+      rightType,
+      node.operator,
+      node,
+    );
   }
 
   public visitUnaryExpression(node: t.UnaryExpression): Type {
@@ -317,63 +338,114 @@ export default class TypeVisitor {
     this.symbolTable.declareVariableType(variableName, newType);
   }
 
+  private visitAssignmentMemberExpression(
+    left: t.MemberExpression,
+    rhsType: Type,
+    operator: string,
+  ): any {
+    if (operator !== "=") {
+      console.warn(
+        `visitAssignmentMemberExpression: assignments of type ${operator} are not yet supported`,
+      );
+      return rhsType;
+    }
+    // Assignment to array or object member:
+    // We ONLY handle numeric assignments to arrays, and static property assignments to objects
+    // Dynamic property assignments in the form `obj[fieldName]` are NOT supported as the field name can vary at runtime
+    // We assume that all assignments to arrays are in range - i.e. ignoring potentially undefined elements added in between
+    let lhsType = this.visitExpression(left.object);
+
+    let indexType = null; // Only used for arrays
+    let propertyName; // Only used for objects
+    if (!t.isExpression(left.property)) {
+      console.warn(
+        "visitAssignmentMemberExpression: Unknown property type for LHS",
+      );
+      return new AnyType();
+    }
+    propertyName = this.getObjectPropertyName(left.property);
+    let lhsIsVariable = t.isIdentifier(left.object);
+
+    if (lhsIsVariable) {
+      // if the LHS is a variable, update its type
+      if (lhsType instanceof ArrayType) {
+        indexType = this.visitExpression(left.property);
+        if (indexType instanceof NumberType) {
+          // Extend the array type in-place to support circular types
+          lhsType.extend([rhsType], true);
+        } else {
+          console.warn(
+            `visitAssignmentExpression: only numerical array indices are supported`,
+          );
+        }
+      } else if (lhsType instanceof ObjectType && propertyName) {
+        // Union types together if the object field previously had something else
+        // This allows assignments to properties inside an if statement to work
+        let oldRhsType = lhsType.fields[propertyName];
+        if (oldRhsType) {
+          lhsType.fields[propertyName] = UnionType.asNeeded([
+            rhsType,
+            oldRhsType,
+          ]);
+        } else {
+          lhsType.fields[propertyName] = rhsType;
+        }
+      }
+    }
+
+    // Otherwise, I don't think there's anything to do? JS will accept assigning to members of anything -
+    // for numbers and strings it appears to just be a noop -JL
+    return rhsType;
+  }
+
   // Assignments to existing vars, e.g. `x = 5;`
   private visitAssignmentExpression(node: t.AssignmentExpression): Type {
+    let rhsType = this.visitExpression(node.right);
     switch (node.operator) {
       case "=":
-        let rhsType = this.visitExpression(node.right);
         if (t.isIdentifier(node.left)) {
           // Setting a variable
           this.setVariableType(node.left.name, rhsType, node);
           return rhsType;
         } else if (t.isMemberExpression(node.left)) {
-          // Assignment to array or object member:
-          // We ONLY handle numeric assignments to arrays, and static property assignments to objects
-          // Dynamic property assignments in the form `obj[fieldName]` are NOT supported as the field name can vary at runtime
-          // We assume that all assignments to arrays are in range - i.e. ignoring potentially undefined elements added in between
-          let lhsType = this.visitExpression(node.left.object);
-          let indexType = null; // Only used for arrays
-          let propertyName; // Only used for objects
-          if (!t.isExpression(node.left.property)) {
-            break;
-          }
-          propertyName = this.getObjectPropertyName(node.left.property);
-          let lhsIsVariable = t.isIdentifier(node.left.object);
-
-          if (lhsIsVariable) {
-            // if the LHS is a variable, update its type
-            if (lhsType instanceof ArrayType) {
-              indexType = this.visitExpression(node.left.property);
-              if (indexType instanceof NumberType) {
-                // Extend the array type in-place to support circular types
-                lhsType.extend([rhsType], true);
-              } else {
-                console.warn(
-                  `visitAssignmentExpression: only numerical array indices are supported`,
-                );
-              }
-            } else if (lhsType instanceof ObjectType && propertyName) {
-              // Union types together if the object field previously had something else
-              // This allows assignments to properties inside an if statement to work
-              let oldRhsType = lhsType.fields[propertyName];
-              if (oldRhsType) {
-                lhsType.fields[propertyName] = UnionType.asNeeded([
-                  rhsType,
-                  oldRhsType,
-                ]);
-              } else {
-                lhsType.fields[propertyName] = rhsType;
-              }
-            }
-          }
-
-          // Otherwise, I don't think there's anything to do? JS will accept assigning to members of anything -
-          // for numbers and strings it appears to just be a noop -JL
-          return rhsType;
+          return this.visitAssignmentMemberExpression(
+            node.left,
+            rhsType,
+            node.operator,
+          );
+        } else {
+          break;
+        }
+      case "*=":
+      case "/=":
+      case "%=":
+      case "+=":
+      case "-=":
+      case "<<=":
+      case ">>=":
+      case ">>>=":
+      case "&=":
+      case "^=":
+      case "|=":
+      case "**=":
+        let lhsType;
+        // Only supported for variables
+        if (t.isIdentifier(node.left)) {
+          lhsType = this.getVariableType(node.left.name, node);
+          let newType = this.getBinaryOperationType(
+            lhsType,
+            rhsType,
+            node.operator.slice(0, node.operator.length - 1),
+            node,
+          );
+          this.setVariableType(node.left.name, newType, node);
+          return newType;
+        } else {
+          break;
         }
     }
     console.warn(
-      `visitAssignmentExpression: assignments of type ${node.operator} are not yet supported`,
+      `visitAssignmentExpression: assignments of type ${node.left.type} ${node.operator} ${node.right.type} are not yet supported`,
     );
     return new AnyType();
   }

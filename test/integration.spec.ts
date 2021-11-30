@@ -2,7 +2,6 @@ import report from "../src/errorReport";
 import TypeChecker from "../src/TypeChecker";
 import assert = require("assert");
 import SymbolTable, {
-  AnyType,
   ArrayType,
   BooleanType,
   ErrorType,
@@ -58,6 +57,21 @@ describe("Integration Tests", () => {
       new Map([
         ["x", new NumberType()],
         ["y", new StringType()],
+      ]),
+    );
+  });
+
+  it("Assignment with +=", () => {
+    let symbolTable = typecheckFiles([
+      "./test/test-examples/assignment-plus-equals.js",
+    ]).getMap();
+    assert.equal(report.isEmpty(), true, "Error report should be empty");
+
+    assert.deepEqual(
+      symbolTable,
+      new Map([
+        ["x", new NumberType()],
+        ["s", new StringType()],
       ]),
     );
   });
